@@ -40,7 +40,7 @@ export default function Home() {
   >('inputs');
   const [calculated, setCalculated] = useState(false);
 
-  // Emergency fund preferences (new): target type + months to reach
+  // Emergency fund preferences (target type + months to reach)
   const [efTargetType, setEfTargetType] = useState<'min' | 'rec' | 'cons'>('rec');
   const [efMonthsToReach, setEfMonthsToReach] = useState<number>(12);
 
@@ -87,7 +87,7 @@ export default function Home() {
       ? calculateHealthScore(inputs, budget, ef, insurance)
       : null;
 
-  // EF dynamic selection values (new)
+  // EF dynamic selection values
   const selectedEfTarget =
     !ef ? 0 : efTargetType === 'cons' ? ef.conservativeTarget : efTargetType === 'min' ? ef.minimumTarget : ef.recommendedTarget;
   const selectedEfGap = Math.max(0, selectedEfTarget - (ef ? ef.existing : 0));
@@ -138,70 +138,30 @@ export default function Home() {
           <div className="card">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Enter Your Financial Information</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="label">Name</label>
-                <input type="text" value={inputs.name} onChange={(e) => setInputs({ ...inputs, name: e.target.value })} className="field" />
-              </div>
-              <div>
-                <label className="label">Age</label>
-                <input type="number" value={inputs.age} onChange={(e) => setInputs({ ...inputs, age: Number(e.target.value) })} className="field" />
-              </div>
-              <div>
-                <label className="label">Monthly Income (Post-tax)</label>
-                <input type="number" value={inputs.monthlyIncome} onChange={(e) => setInputs({ ...inputs, monthlyIncome: Number(e.target.value) })} className="field" />
-              </div>
+              <div><label className="label">Name</label><input className="field" value={inputs.name} onChange={(e) => setInputs({ ...inputs, name: e.target.value })} /></div>
+              <div><label className="label">Age</label><input type="number" className="field" value={inputs.age} onChange={(e) => setInputs({ ...inputs, age: Number(e.target.value) })} /></div>
+              <div><label className="label">Monthly Income (Post-tax)</label><input type="number" className="field" value={inputs.monthlyIncome} onChange={(e) => setInputs({ ...inputs, monthlyIncome: Number(e.target.value) })} /></div>
               <div>
                 <label className="label">City Tier</label>
-                <select value={inputs.cityTier} onChange={(e) => setInputs({ ...inputs, cityTier: e.target.value as any })} className="field">
-                  <option>Tier 1 (Metro)</option>
-                  <option>Tier 2</option>
-                  <option>Tier 3</option>
+                <select className="field" value={inputs.cityTier} onChange={(e) => setInputs({ ...inputs, cityTier: e.target.value as any })}>
+                  <option>Tier 1 (Metro)</option><option>Tier 2</option><option>Tier 3</option>
                 </select>
               </div>
-              <div>
-                <label className="label">Number of Dependents</label>
-                <input type="number" value={inputs.dependents} onChange={(e) => setInputs({ ...inputs, dependents: Number(e.target.value) })} className="field" />
-              </div>
+              <div><label className="label">Number of Dependents</label><input type="number" className="field" value={inputs.dependents} onChange={(e) => setInputs({ ...inputs, dependents: Number(e.target.value) })} /></div>
               <div>
                 <label className="label">Risk Tolerance</label>
-                <select value={inputs.riskTolerance} onChange={(e) => setInputs({ ...inputs, riskTolerance: e.target.value as any })} className="field">
-                  <option>Conservative</option>
-                  <option>Moderate</option>
-                  <option>Aggressive</option>
+                <select className="field" value={inputs.riskTolerance} onChange={(e) => setInputs({ ...inputs, riskTolerance: e.target.value as any })}>
+                  <option>Conservative</option><option>Moderate</option><option>Aggressive</option>
                 </select>
               </div>
-              <div>
-                <label className="label">Current Monthly Expenses</label>
-                <input type="number" value={inputs.currentExpenses} onChange={(e) => setInputs({ ...inputs, currentExpenses: Number(e.target.value) })} className="field" />
-              </div>
-              <div>
-                <label className="label">Existing Emergency Fund</label>
-                <input type="number" value={inputs.existingEmergencyFund} onChange={(e) => setInputs({ ...inputs, existingEmergencyFund: Number(e.target.value) })} className="field" />
-              </div>
-              <div>
-                <label className="label">Existing Term Insurance Cover</label>
-                <input type="number" value={inputs.existingTermInsurance} onChange={(e) => setInputs({ ...inputs, existingTermInsurance: Number(e.target.value) })} className="field" />
-              </div>
-              <div>
-                <label className="label">Existing Health Insurance Cover</label>
-                <input type="number" value={inputs.existingHealthInsurance} onChange={(e) => setInputs({ ...inputs, existingHealthInsurance: Number(e.target.value) })} className="field" />
-              </div>
-              <div>
-                <label className="label">Outstanding Loans (EMI / month)</label>
-                <input type="number" value={inputs.loanEMI} onChange={(e) => setInputs({ ...inputs, loanEMI: Number(e.target.value) })} className="field" />
-              </div>
-              <div>
-                <label className="label">Current Investments Value</label>
-                <input type="number" value={inputs.currentInvestments} onChange={(e) => setInputs({ ...inputs, currentInvestments: Number(e.target.value) })} className="field" />
-              </div>
-              <div>
-                <label className="label">Retirement Age Goal</label>
-                <input type="number" value={inputs.retirementAge} onChange={(e) => setInputs({ ...inputs, retirementAge: Number(e.target.value) })} className="field" />
-              </div>
-              <div>
-                <label className="label">Current PF/EPF Balance</label>
-                <input type="number" value={inputs.epfBalance} onChange={(e) => setInputs({ ...inputs, epfBalance: Number(e.target.value) })} className="field" />
-              </div>
+              <div><label className="label">Current Monthly Expenses</label><input type="number" className="field" value={inputs.currentExpenses} onChange={(e) => setInputs({ ...inputs, currentExpenses: Number(e.target.value) })} /></div>
+              <div><label className="label">Existing Emergency Fund</label><input type="number" className="field" value={inputs.existingEmergencyFund} onChange={(e) => setInputs({ ...inputs, existingEmergencyFund: Number(e.target.value) })} /></div>
+              <div><label className="label">Existing Term Insurance Cover</label><input type="number" className="field" value={inputs.existingTermInsurance} onChange={(e) => setInputs({ ...inputs, existingTermInsurance: Number(e.target.value) })} /></div>
+              <div><label className="label">Existing Health Insurance Cover</label><input type="number" className="field" value={inputs.existingHealthInsurance} onChange={(e) => setInputs({ ...inputs, existingHealthInsurance: Number(e.target.value) })} /></div>
+              <div><label className="label">Outstanding Loans (EMI / month)</label><input type="number" className="field" value={inputs.loanEMI} onChange={(e) => setInputs({ ...inputs, loanEMI: Number(e.target.value) })} /></div>
+              <div><label className="label">Current Investments Value</label><input type="number" className="field" value={inputs.currentInvestments} onChange={(e) => setInputs({ ...inputs, currentInvestments: Number(e.target.value) })} /></div>
+              <div><label className="label">Retirement Age Goal</label><input type="number" className="field" value={inputs.retirementAge} onChange={(e) => setInputs({ ...inputs, retirementAge: Number(e.target.value) })} /></div>
+              <div><label className="label">Current PF/EPF Balance</label><input type="number" className="field" value={inputs.epfBalance} onChange={(e) => setInputs({ ...inputs, epfBalance: Number(e.target.value) })} /></div>
             </div>
 
             <div className="mt-8 flex gap-4">
@@ -221,19 +181,16 @@ export default function Home() {
                 <div className="text-3xl font-bold mt-2">{budget.savingsRate.toFixed(1)}%</div>
                 <div className="text-sm mt-2">{budget.status}</div>
               </div>
-
               <div className={cn(ef.completionPct >= 75 ? 'card-success' : 'card-warn', 'rounded-xl p-6 shadow-lg')}>
                 <div className="text-sm opacity-90">Emergency Fund</div>
                 <div className="text-3xl font-bold mt-2">{ef.completionPct.toFixed(0)}%</div>
                 <div className="text-sm mt-2">{ef.status}</div>
               </div>
-
               <div className={cn(insurance.term.gap + insurance.health.gap > 0 ? 'card-warn' : 'card-success', 'rounded-xl p-6 shadow-lg')}>
                 <div className="text-sm opacity-90">Insurance Gap</div>
                 <div className="text-3xl font-bold mt-2">{formatCurrency(insurance.term.gap + insurance.health.gap)}</div>
                 <div className="text-sm mt-2">To be filled</div>
               </div>
-
               <div className={cn(
                 healthScore.overallScore >= 80 ? 'card-success' :
                 healthScore.overallScore >= 60 ? 'card-info' : 'card-warn',
@@ -279,20 +236,15 @@ export default function Home() {
           <div className="card">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Emergency Fund Planning</h2>
 
-            {/* Controls: target type + months to reach */}
-            <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
-              <div className="flex items-center gap-3">
-                <span className="text-sm font-medium text-gray-700">Target type:</span>
-                <div className="inline-flex rounded-lg border border-gray-200 overflow-hidden">
-                  <button onClick={() => setEfTargetType('min')} className={cn('px-3 py-2 text-sm', efTargetType === 'min' ? 'bg-brand-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50')}>Minimum (6 mo)</button>
-                  <button onClick={() => setEfTargetType('rec')} className={cn('px-3 py-2 text-sm border-l border-gray-200', efTargetType === 'rec' ? 'bg-brand-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50')}>Recommended (9 mo)</button>
-                  <button onClick={() => setEfTargetType('cons')} className={cn('px-3 py-2 text-sm border-l border-gray-200', efTargetType === 'cons' ? 'bg-brand-primary text-white' : 'bg-white text-gray-700 hover:bg-gray-50')}>Conservative (12 mo)</button>
-                </div>
-              </div>
-
+            {/* Time to reach only */}
+            <div className="flex items-center justify-end mb-4">
               <div className="flex items-center gap-3">
                 <span className="text-sm font-medium text-gray-700">Time to reach:</span>
-                <select value={efMonthsToReach} onChange={(e) => setEfMonthsToReach(parseInt(e.target.value))} className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary">
+                <select
+                  value={efMonthsToReach}
+                  onChange={(e) => setEfMonthsToReach(parseInt(e.target.value))}
+                  className="px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-brand-primary"
+                >
                   <option value={6}>6 months</option>
                   <option value={9}>9 months</option>
                   <option value={12}>12 months</option>
@@ -310,20 +262,55 @@ export default function Home() {
               </p>
             </div>
 
-            {/* Target cards with selection highlight */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-              <div className={cn('text-center p-4 rounded-lg bg-white border', efTargetType === 'cons' ? 'border-brand-primary ring-2 ring-blue-200' : 'border-gray-200')}>
+            {/* Clickable target cards */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" role="tablist" aria-label="Emergency fund target selection">
+              <button
+                type="button"
+                role="tab"
+                aria-selected={efTargetType === 'cons'}
+                onClick={() => setEfTargetType('cons')}
+                className={cn(
+                  'w-full text-left p-4 rounded-lg bg-white border transition-shadow focus:outline-none focus:ring-2',
+                  efTargetType === 'cons'
+                    ? 'border-brand-primary ring-brand-primary/30 shadow-md'
+                    : 'border-gray-200 hover:border-brand-primary/60 hover:shadow-sm'
+                )}
+              >
                 <div className="text-sm text-gray-600">Conservative (12 mo)</div>
                 <div className="text-xl font-bold mt-2">{formatCurrency(ef.conservativeTarget)}</div>
-              </div>
-              <div className={cn('text-center p-4 rounded-lg bg-white border', efTargetType === 'rec' ? 'border-brand-primary ring-2 ring-blue-200' : 'border-gray-200')}>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={efTargetType === 'rec'}
+                onClick={() => setEfTargetType('rec')}
+                className={cn(
+                  'w-full text-left p-4 rounded-lg bg-white border transition-shadow focus:outline-none focus:ring-2',
+                  efTargetType === 'rec'
+                    ? 'border-brand-primary ring-brand-primary/30 shadow-md'
+                    : 'border-gray-200 hover:border-brand-primary/60 hover:shadow-sm'
+                )}
+              >
                 <div className="text-sm text-gray-600">Recommended (9 mo)</div>
                 <div className="text-xl font-bold mt-2">{formatCurrency(ef.recommendedTarget)}</div>
-              </div>
-              <div className={cn('text-center p-4 rounded-lg bg-white border', efTargetType === 'min' ? 'border-brand-primary ring-2 ring-blue-200' : 'border-gray-200')}>
+              </button>
+
+              <button
+                type="button"
+                role="tab"
+                aria-selected={efTargetType === 'min'}
+                onClick={() => setEfTargetType('min')}
+                className={cn(
+                  'w-full text-left p-4 rounded-lg bg-white border transition-shadow focus:outline-none focus:ring-2',
+                  efTargetType === 'min'
+                    ? 'border-brand-primary ring-brand-primary/30 shadow-md'
+                    : 'border-gray-200 hover:border-brand-primary/60 hover:shadow-sm'
+                )}
+              >
                 <div className="text-sm text-gray-600">Minimum (6 mo)</div>
                 <div className="text-xl font-bold mt-2">{formatCurrency(ef.minimumTarget)}</div>
-              </div>
+              </button>
             </div>
 
             {/* Status + progress */}
@@ -598,7 +585,4 @@ function ScoreCard({ title, score, subtitle }: { title: string; score: number; s
     <div className="border rounded-lg p-4">
       <div className="flex justify-between items-center mb-2"><span className="font-medium">{title}</span></div>
       <div className="mb-2"><div className="text-2xl font-bold">{score.toFixed(0)}/100</div><div className="text-sm text-gray-600">{subtitle}</div></div>
-      <div className="w-full bg-gray-200 rounded-full h-2"><div className={cn('h-2 rounded-full', bar)} style={{ width: `${Math.max(0, Math.min(100, score))}%` }} /></div>
-    </div>
-  );
-}
+      <div className="w-full bg-gray-200 rounded-full
