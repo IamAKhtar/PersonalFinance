@@ -579,10 +579,35 @@ export default function Home() {
   );
 }
 
-function ScoreCard({ title, score, subtitle }: { title: string; score: number; subtitle: string }) {
-  const bar = score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-yellow-500' : 'bg-orange-500';
+function ScoreCard({
+  title,
+  score,
+  subtitle,
+}: {
+  title: string;
+  score: number;
+  subtitle: string;
+}) {
+  const bar =
+    score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-yellow-500' : 'bg-orange-500';
+
   return (
     <div className="border rounded-lg p-4">
-      <div className="flex justify-between items-center mb-2"><span className="font-medium">{title}</span></div>
-      <div className="mb-2"><div className="text-2xl font-bold">{score.toFixed(0)}/100</div><div className="text-sm text-gray-600">{subtitle}</div></div>
-      <div className="w-full bg-gray-200 rounded-full
+      <div className="flex justify-between items-center mb-2">
+        <span className="font-medium">{title}</span>
+      </div>
+
+      <div className="mb-2">
+        <div className="text-2xl font-bold">{score.toFixed(0)}/100</div>
+        <div className="text-sm text-gray-600">{subtitle}</div>
+      </div>
+
+      <div className="w-full bg-gray-200 rounded-full h-2">
+        <div
+          className={cn('h-2 rounded-full', bar)}
+          style={{ width: `${Math.max(0, Math.min(100, score))}%` }}
+        />
+      </div>
+    </div>
+  );
+}
