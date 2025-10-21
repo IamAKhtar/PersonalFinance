@@ -15,6 +15,25 @@ function cn(...classes: string[]) {
   return classes.filter(Boolean).join(' ');
 }
 
+// Local-only types for Investments tab
+type SipItem = {
+  id: string;
+  name: string;
+  category: 'Equity' | 'Debt' | 'Gold';
+  monthly: number;
+  start: string; // YYYY-MM
+};
+
+type AssetItem = {
+  id: string;
+  bucket: 'Equity' | 'Debt' | 'Gold' | 'EPF/PPF' | 'Cash/Liquid';
+  amount: number;
+};
+
+function uid() {
+  return `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+}
+
 const defaultInputs: UserInputs = {
   name: '',
   age: 30,
@@ -44,6 +63,19 @@ export default function Home() {
   const [efTargetType, setEfTargetType] = useState<'min' | 'rec' | 'cons'>('rec');
   const [efMonthsToReach, setEfMonthsToReach] = useState<number>(12);
 
+  // Investments tab state
+  const [sips, setSips] = useState<SipItem[]>([]);
+  const [assets, setAssets] = useState<AssetItem[]>([]);
+
+  // Quick add form local state (controlled inputs)
+  const [sipName, setSipName] = useState('');
+  const [sipCat, setSipCat] = useState<SipItem['category']>('Equity');
+  const [sipMonthly, setSipMonthly] = useState<number | ''>('');
+  const [sipStart, setSipStart] = useState('');
+
+  const [assetBucket, setAssetBucket] = useState<AssetItem['bucket']>('Equity');
+  const [assetAmount, setAssetAmount] = useState<number | ''>('');
+
   useEffect(() => {
     try {
       const saved = localStorage.getItem('financeInputs');
@@ -57,6 +89,10 @@ export default function Home() {
         if (p.efTargetType) setEfTargetType(p.efTargetType);
         if (p.efMonthsToReach) setEfMonthsToReach(p.efMonthsToReach);
       }
+      const s = localStorage.getItem('sips');
+      if (s) setSips(JSON.parse(s));
+      const a = localStorage.getItem('assets');
+      if (a) setAssets(JSON.parse(a));
     } catch {
       // ignore
     }
@@ -68,6 +104,14 @@ export default function Home() {
     }
   }, [efTargetType, efMonthsToReach, calculated]);
 
+  useEffect(() => {
+    localStorage.setItem('sips', JSON.stringify(sips));
+  }, [sips]);
+
+  useEffect(() => {
+    localStorage.setItem('assets', JSON.stringify(assets));
+  }, [assets]);
+
   const handleSave = () => {
     localStorage.setItem('financeInputs', JSON.stringify(inputs));
     setCalculated(true);
@@ -76,7 +120,7 @@ export default function Home() {
 
   const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
-  // Calculations
+  // Core calculations
   const budget = calculated ? calculateBudget(inputs) : null;
   const ef = calculated ? calculateEmergencyFund(inputs) : null;
   const insurance = calculated ? calculateInsurance(inputs) : null;
@@ -92,6 +136,48 @@ export default function Home() {
     !ef ? 0 : efTargetType === 'cons' ? ef.conservativeTarget : efTargetType === 'min' ? ef.minimumTarget : ef.recommendedTarget;
   const selectedEfGap = Math.max(0, selectedEfTarget - (ef ? ef.existing : 0));
   const selectedEfMonthly = efMonthsToReach > 0 ? Math.ceil(selectedEfGap / efMonthsToReach) : 0;
+
+  // Investments helpers
+  const totalSipOutflow = sips.reduce((sum, r) => sum + (r.monthly || 0), 0);
+  const recommendedSavings = investment?.recommendedSavings ?? 0;
+  const additionalSipCapacity = Math.max(0, recommendedSavings - totalSipOutflow);
+  const sipOverload = Math.max(0, totalSipOutflow - recommendedSavings);
+
+  const totals = assets.reduce(
+    (acc, a) => {
+      if (a.bucket === 'Equity') acc.eq += a.amount;
+      else if (a.bucket === 'Debt') acc.debt += a.amount;
+      else if (a.bucket === 'Gold') acc.gold += a.amount;
+      else if (a.bucket === 'EPF/PPF') acc.debt += a.amount; // treat in debt bucket
+      else if (a.bucket === 'Cash/Liquid') acc.debt += a.amount; // conservative
+      return acc;
+    },
+    { eq: 0, debt: 0, gold: 0 }
+  );
+  const totalAssetsForAlloc = totals.eq + totals.debt + totals.gold || 1;
+  const curEqPct = (totals.eq / totalAssetsForAlloc) * 100;
+  const curDebtPct = (totals.debt / totalAssetsForAlloc) * 100;
+  const targetEq = investment?.finalEquityPct ?? 0;
+  const targetDebt = investment?.finalDebtPct ?? 0;
+  const needMoreEquity = targetEq > curEqPct;
+  const needMoreDebt = targetDebt > curDebtPct;
+
+  // Add/remove handlers
+  const addSip = () => {
+    if (!sipName.trim() || !sipMonthly || sipMonthly <= 0) return;
+    setSips([...sips, { id: uid(), name: sipName.trim(), category: sipCat, monthly: Number(sipMonthly), start: sipStart || '' }]);
+    setSipName('');
+    setSipMonthly('');
+    setSipStart('');
+  };
+  const removeSip = (id: string) => setSips(sips.filter((x) => x.id !== id));
+
+  const addAsset = () => {
+    if (!assetAmount || assetAmount <= 0) return;
+    setAssets([...assets, { id: uid(), bucket: assetBucket, amount: Number(assetAmount) }]);
+    setAssetAmount('');
+  };
+  const removeAsset = (id: string) => setAssets(assets.filter((x) => x.id !== id));
 
   return (
     <div className="min-h-screen">
@@ -140,6 +226,7 @@ export default function Home() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div><label className="label">Name</label><input className="field" value={inputs.name} onChange={(e) => setInputs({ ...inputs, name: e.target.value })} /></div>
               <div><label className="label">Age</label><input type="number" className="field" value={inputs.age} onChange={(e) => setInputs({ ...inputs, age: Number(e.target.value) })} /></div>
+
               <div><label className="label">Monthly Income (Post-tax)</label><input type="number" className="field" value={inputs.monthlyIncome} onChange={(e) => setInputs({ ...inputs, monthlyIncome: Number(e.target.value) })} /></div>
               <div>
                 <label className="label">City Tier</label>
@@ -147,6 +234,7 @@ export default function Home() {
                   <option>Tier 1 (Metro)</option><option>Tier 2</option><option>Tier 3</option>
                 </select>
               </div>
+
               <div><label className="label">Number of Dependents</label><input type="number" className="field" value={inputs.dependents} onChange={(e) => setInputs({ ...inputs, dependents: Number(e.target.value) })} /></div>
               <div>
                 <label className="label">Risk Tolerance</label>
@@ -154,14 +242,23 @@ export default function Home() {
                   <option>Conservative</option><option>Moderate</option><option>Aggressive</option>
                 </select>
               </div>
+
               <div><label className="label">Current Monthly Expenses</label><input type="number" className="field" value={inputs.currentExpenses} onChange={(e) => setInputs({ ...inputs, currentExpenses: Number(e.target.value) })} /></div>
               <div><label className="label">Existing Emergency Fund</label><input type="number" className="field" value={inputs.existingEmergencyFund} onChange={(e) => setInputs({ ...inputs, existingEmergencyFund: Number(e.target.value) })} /></div>
+
               <div><label className="label">Existing Term Insurance Cover</label><input type="number" className="field" value={inputs.existingTermInsurance} onChange={(e) => setInputs({ ...inputs, existingTermInsurance: Number(e.target.value) })} /></div>
               <div><label className="label">Existing Health Insurance Cover</label><input type="number" className="field" value={inputs.existingHealthInsurance} onChange={(e) => setInputs({ ...inputs, existingHealthInsurance: Number(e.target.value) })} /></div>
+
               <div><label className="label">Outstanding Loans (EMI / month)</label><input type="number" className="field" value={inputs.loanEMI} onChange={(e) => setInputs({ ...inputs, loanEMI: Number(e.target.value) })} /></div>
               <div><label className="label">Current Investments Value</label><input type="number" className="field" value={inputs.currentInvestments} onChange={(e) => setInputs({ ...inputs, currentInvestments: Number(e.target.value) })} /></div>
+
               <div><label className="label">Retirement Age Goal</label><input type="number" className="field" value={inputs.retirementAge} onChange={(e) => setInputs({ ...inputs, retirementAge: Number(e.target.value) })} /></div>
               <div><label className="label">Current PF/EPF Balance</label><input type="number" className="field" value={inputs.epfBalance} onChange={(e) => setInputs({ ...inputs, epfBalance: Number(e.target.value) })} /></div>
+            </div>
+
+            {/* gentle nudge to investments */}
+            <div className="mt-4 text-sm text-gray-600">
+              Want a detailed breakdown? <button className="text-brand-primary underline" onClick={() => setActiveTab('investment')}>Add your SIPs and asset buckets →</button>
             </div>
 
             <div className="mt-8 flex gap-4">
@@ -181,16 +278,19 @@ export default function Home() {
                 <div className="text-3xl font-bold mt-2">{budget.savingsRate.toFixed(1)}%</div>
                 <div className="text-sm mt-2">{budget.status}</div>
               </div>
+
               <div className={cn(ef.completionPct >= 75 ? 'card-success' : 'card-warn', 'rounded-xl p-6 shadow-lg')}>
                 <div className="text-sm opacity-90">Emergency Fund</div>
                 <div className="text-3xl font-bold mt-2">{ef.completionPct.toFixed(0)}%</div>
                 <div className="text-sm mt-2">{ef.status}</div>
               </div>
+
               <div className={cn(insurance.term.gap + insurance.health.gap > 0 ? 'card-warn' : 'card-success', 'rounded-xl p-6 shadow-lg')}>
                 <div className="text-sm opacity-90">Insurance Gap</div>
                 <div className="text-3xl font-bold mt-2">{formatCurrency(insurance.term.gap + insurance.health.gap)}</div>
                 <div className="text-sm mt-2">To be filled</div>
               </div>
+
               <div className={cn(
                 healthScore.overallScore >= 80 ? 'card-success' :
                 healthScore.overallScore >= 60 ? 'card-info' : 'card-warn',
@@ -200,6 +300,11 @@ export default function Home() {
                 <div className="text-3xl font-bold mt-2">{healthScore.overallScore.toFixed(0)}/100</div>
                 <div className="text-sm mt-2">Grade: {healthScore.grade}</div>
               </div>
+            </div>
+
+            {/* CTA to complete investments */}
+            <div className="text-sm text-gray-600">
+              Improve accuracy: <button className="text-brand-primary underline" onClick={() => setActiveTab('investment')}>add your current SIPs and assets →</button>
             </div>
           </div>
         )}
@@ -353,7 +458,7 @@ export default function Home() {
               </div>
             </div>
 
-            {/* Parking strategy (based on Recommended for guidance) */}
+            {/* Parking strategy (for full target) */}
             <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mt-6">
               <h4 className="font-semibold text-yellow-800 mb-2">Parking Strategy (for full target)</h4>
               <ul className="text-sm text-yellow-700 space-y-1">
@@ -447,10 +552,22 @@ export default function Home() {
           <div className="card">
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Investment Allocation Strategy</h2>
 
+            {/* Baseline pill from Inputs */}
+            <div className="text-xs text-gray-600 mb-3">
+              Baseline from Inputs — Investments: {formatCurrency(inputs.currentInvestments)} • EPF: {formatCurrency(inputs.epfBalance)}
+            </div>
+
+            {/* Allocation summary */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <div className="bg-gray-50 p-4 rounded-lg"><div className="text-sm text-gray-600">Base Equity % (100 - Age)</div><div className="text-lg font-bold">{investment.baseEquityPct}%</div></div>
-                <div className="bg-gray-50 p-4 rounded-lg"><div className="text-sm text-gray-600">Risk Adjustment ({inputs.riskTolerance})</div><div className="text-lg font-bold">{investment.riskAdjustment > 0 ? '+' : ''}{investment.riskAdjustment}%</div></div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Base Equity % (100 - Age)</div>
+                  <div className="text-lg font-bold">{investment.baseEquityPct}%</div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Risk Adjustment ({inputs.riskTolerance})</div>
+                  <div className="text-lg font-bold">{investment.riskAdjustment > 0 ? '+' : ''}{investment.riskAdjustment}%</div>
+                </div>
               </div>
 
               <div className="card-info p-6 rounded-lg">
@@ -461,16 +578,139 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Monthly SIP recommendation vs current SIPs */}
             <div className="border-t pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg"><div className="text-sm text-gray-600">Recommended Savings (20%)</div><div className="text-xl font-bold">{formatCurrency(investment.recommendedSavings)}</div></div>
-              <div className="bg-orange-50 p-4 rounded-lg"><div className="text-sm text-orange-700">Emergency Fund Build-up</div><div className="text-xl font-bold text-orange-700">-{formatCurrency(investment.emergencyFundContribution)}</div></div>
-              <div className="bg-green-50 p-4 rounded-lg"><div className="text-sm text-green-700">Available for Investment</div><div className="text-xl font-bold text-green-700">{formatCurrency(investment.availableForInvestment)}</div></div>
-              <div className="bg-blue-50 border-2 border-blue-500 p-4 rounded-lg"><div className="text-sm text-blue-700 font-medium">MONTHLY SIP</div><div className="text-xl font-bold text-blue-700">{formatCurrency(investment.monthlySIP)}</div></div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="text-sm text-gray-600">Recommended Savings (20%)</div>
+                <div className="text-xl font-bold">{formatCurrency(recommendedSavings)}</div>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="text-sm text-gray-600">Your Current SIP Outflow</div>
+                <div className="text-xl font-bold">{formatCurrency(totalSipOutflow)}</div>
+              </div>
+              <div className={cn('p-4 rounded-lg', additionalSipCapacity > 0 ? 'bg-green-50' : 'bg-orange-50')}>
+                <div className={cn('text-sm', additionalSipCapacity > 0 ? 'text-green-700' : 'text-orange-700')}>
+                  {additionalSipCapacity > 0 ? 'Additional SIP Capacity' : 'Over by'}
+                </div>
+                <div className={cn('text-xl font-bold', additionalSipCapacity > 0 ? 'text-green-700' : 'text-orange-700')}>
+                  {formatCurrency(additionalSipCapacity > 0 ? additionalSipCapacity : sipOverload)}
+                </div>
+              </div>
+              <div className="bg-blue-50 border-2 border-blue-500 p-4 rounded-lg">
+                <div className="text-sm text-blue-700 font-medium">Suggested Monthly SIP (new money)</div>
+                <div className="text-xl font-bold text-blue-700">{formatCurrency(Math.max(0, additionalSipCapacity))}</div>
+              </div>
             </div>
 
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="bg-purple-50 p-4 rounded-lg"><div className="text-sm text-purple-700">Equity Portion ({investment.finalEquityPct.toFixed(0)}%)</div><div className="text-2xl font-bold text-purple-700">{formatCurrency(investment.equityPortion)}</div><div className="text-xs text-purple-600 mt-2">Large Cap, Mid Cap, Small Cap Funds</div></div>
-              <div className="bg-indigo-50 p-4 rounded-lg"><div className="text-sm text-indigo-700">Debt Portion ({investment.finalDebtPct.toFixed(0)}%)</div><div className="text-2xl font-bold text-indigo-700">{formatCurrency(investment.debtPortion)}</div><div className="text-xs text-indigo-600 mt-2">Debt Funds, PPF/EPF, Gold</div></div>
+            {/* SIPs: add + list */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4">Your Current SIPs</h3>
+
+              <div className="bg-white border rounded-lg p-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+                  <input placeholder="Scheme / Purpose" className="field" value={sipName} onChange={(e) => setSipName(e.target.value)} />
+                  <select className="field" value={sipCat} onChange={(e) => setSipCat(e.target.value as SipItem['category'])}>
+                    <option>Equity</option><option>Debt</option><option>Gold</option>
+                  </select>
+                  <input type="number" placeholder="Monthly ₹" className="field" value={sipMonthly} onChange={(e) => setSipMonthly(e.target.value === '' ? '' : Number(e.target.value))} />
+                  <input type="month" className="field" value={sipStart} onChange={(e) => setSipStart(e.target.value)} />
+                  <button className="btn-primary" onClick={addSip}>Add SIP</button>
+                </div>
+              </div>
+
+              <div className="overflow-auto rounded-lg border">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-100 text-gray-700">
+                    <tr>
+                      <th className="text-left p-3">Name</th>
+                      <th className="text-left p-3">Category</th>
+                      <th className="text-right p-3">Monthly</th>
+                      <th className="text-left p-3">Start</th>
+                      <th className="p-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sips.map((r) => (
+                      <tr key={r.id} className="border-t">
+                        <td className="p-3">{r.name}</td>
+                        <td className="p-3">{r.category}</td>
+                        <td className="p-3 text-right">{formatCurrency(r.monthly)}</td>
+                        <td className="p-3">{r.start || '-'}</td>
+                        <td className="p-3 text-right">
+                          <button className="btn-ghost" onClick={() => removeSip(r.id)}>Remove</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {sips.length === 0 && (
+                      <tr><td className="p-4 text-gray-500" colSpan={5}>No SIPs added yet</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* Assets: add + list + guidance */}
+            <div className="border-t pt-6">
+              <h3 className="text-lg font-semibold mb-4">Your Existing Assets</h3>
+
+              <div className="bg-white border rounded-lg p-4 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+                  <select className="field" value={assetBucket} onChange={(e) => setAssetBucket(e.target.value as AssetItem['bucket'])}>
+                    <option>Equity</option><option>Debt</option><option>Gold</option>
+                    <option>EPF/PPF</option><option>Cash/Liquid</option>
+                  </select>
+                  <input type="number" placeholder="Amount ₹" className="field" value={assetAmount} onChange={(e) => setAssetAmount(e.target.value === '' ? '' : Number(e.target.value))} />
+                  <div className="md:col-span-1" />
+                  <button className="btn-primary" onClick={addAsset}>Add Asset</button>
+                </div>
+              </div>
+
+              <div className="overflow-auto rounded-lg border mb-4">
+                <table className="min-w-full text-sm">
+                  <thead className="bg-gray-100 text-gray-700">
+                    <tr>
+                      <th className="text-left p-3">Bucket</th>
+                      <th className="text-right p-3">Amount</th>
+                      <th className="p-3"></th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {assets.map((a) => (
+                      <tr key={a.id} className="border-t">
+                        <td className="p-3">{a.bucket}</td>
+                        <td className="p-3 text-right">{formatCurrency(a.amount)}</td>
+                        <td className="p-3 text-right">
+                          <button className="btn-ghost" onClick={() => removeAsset(a.id)}>Remove</button>
+                        </td>
+                      </tr>
+                    ))}
+                    {assets.length === 0 && (
+                      <tr><td className="p-4 text-gray-500" colSpan={3}>No assets added yet</td></tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Current Allocation</div>
+                  <div className="mt-2 text-sm">
+                    Equity: {curEqPct.toFixed(1)}% • Debt+Cash+EPF: {curDebtPct.toFixed(1)}% • Gold: {(100 - curEqPct - curDebtPct).toFixed(1)}%
+                  </div>
+                </div>
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <div className="text-sm text-blue-700 font-medium">Target Allocation</div>
+                  <div className="mt-2 text-sm">Equity: {targetEq.toFixed(0)}% • Debt: {targetDebt.toFixed(0)}%</div>
+                </div>
+                <div className="bg-green-50 p-4 rounded-lg">
+                  <div className="text-sm text-green-700 font-medium">New Money Guidance</div>
+                  <div className="mt-2 text-sm">
+                    {needMoreEquity && <div>• Direct most fresh SIPs to Equity until ~{targetEq.toFixed(0)}%</div>}
+                    {needMoreDebt && <div>• Add to Debt/PPF/EPF until ~{targetDebt.toFixed(0)}%</div>}
+                    {!needMoreEquity && !needMoreDebt && <div>• Allocation on target — split new money by target weights</div>}
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}
