@@ -118,7 +118,8 @@ export default function Home() {
     setActiveTab('dashboard');
   };
 
-  const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
+  const formatCurrency = (n: number) =>
+    `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
   // Core calculations
   const budget = calculated ? calculateBudget(inputs) : null;
@@ -133,16 +134,37 @@ export default function Home() {
 
   // EF dynamic selection values
   const selectedEfTarget =
-    !ef ? 0 : efTargetType === 'cons' ? ef.conservativeTarget : efTargetType === 'min' ? ef.minimumTarget : ef.recommendedTarget;
+    !ef
+      ? 0
+      : efTargetType === 'cons'
+      ? ef.conservativeTarget
+      : efTargetType === 'min'
+      ? ef.minimumTarget
+      : ef.recommendedTarget;
+
   const selectedEfGap = Math.max(0, selectedEfTarget - (ef ? ef.existing : 0));
   const selectedEfMonthly = efMonthsToReach > 0 ? Math.ceil(selectedEfGap / efMonthsToReach) : 0;
 
   // Investments helpers
   const totalSipOutflow = sips.reduce((sum, r) => sum + (r.monthly || 0), 0);
-  const recommendedSavings = investment?.recommendedSavings ?? 0;
-  const additionalSipCapacity = Math.max(0, recommendedSavings - totalSipOutflow);
-  const sipOverload = Math.max(0, totalSipOutflow - recommendedSavings);
 
+  // 20% rule benchmark
+  const recommendedSavings = investment?.recommendedSavings ?? 0;
+  const capacityVs20 = Math.max(0, recommendedSavings - totalSipOutflow);
+  const overVs20 = Math.max(0, totalSipOutflow - recommendedSavings);
+
+  // True net available for investment from Budget surplus
+  const insuranceMonthly = insurance?.monthlyImpact ?? 0;
+  const budgetSavings = budget?.currentSavings ?? 0;
+  const netAvailable = Math.max(
+    0,
+    budgetSavings - selectedEfMonthly - insuranceMonthly - totalSipOutflow
+  );
+
+  // Suggested new SIP should be driven by netAvailable (real cash flow)
+  const suggestedNewSip = netAvailable;
+
+  // Assets allocation summary (for guidance)
   const totals = assets.reduce(
     (acc, a) => {
       if (a.bucket === 'Equity') acc.eq += a.amount;
@@ -165,7 +187,10 @@ export default function Home() {
   // Add/remove handlers
   const addSip = () => {
     if (!sipName.trim() || !sipMonthly || sipMonthly <= 0) return;
-    setSips([...sips, { id: uid(), name: sipName.trim(), category: sipCat, monthly: Number(sipMonthly), start: sipStart || '' }]);
+    setSips([
+      ...sips,
+      { id: uid(), name: sipName.trim(), category: sipCat, monthly: Number(sipMonthly), start: sipStart || '' },
+    ]);
     setSipName('');
     setSipMonthly('');
     setSipStart('');
@@ -185,7 +210,9 @@ export default function Home() {
       <header className="header-brand shadow-lg">
         <div className="max-w-7xl mx-auto px-4 py-6">
           <h1 className="text-3xl font-bold">💰 Personal Finance Planner for India</h1>
-          <p className="text-blue-100 mt-1">Comprehensive financial planning for Indian families</p>
+          <p className="text-blue-100 mt-1">
+            Comprehensive financial planning for Indian families
+          </p>
         </div>
       </header>
 
@@ -208,7 +235,11 @@ export default function Home() {
               const on = 'border-brand-primary text-brand-primary';
               const off = 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300';
               return (
-                <button key={tab.id} onClick={() => setActiveTab(id)} className={cn(base, activeTab === id ? on : off)}>
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(id)}
+                  className={cn(base, activeTab === id ? on : off)}
+                >
                   {tab.label}
                 </button>
               );
@@ -222,48 +253,201 @@ export default function Home() {
         {/* Inputs */}
         {activeTab === 'inputs' && (
           <div className="card">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Enter Your Financial Information</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Enter Your Financial Information
+            </h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div><label className="label">Name</label><input className="field" value={inputs.name} onChange={(e) => setInputs({ ...inputs, name: e.target.value })} /></div>
-              <div><label className="label">Age</label><input type="number" className="field" value={inputs.age} onChange={(e) => setInputs({ ...inputs, age: Number(e.target.value) })} /></div>
+              <div>
+                <label className="label">Name</label>
+                <input
+                  className="field"
+                  value={inputs.name}
+                  onChange={(e) => setInputs({ ...inputs, name: e.target.value })}
+                />
+              </div>
+              <div>
+                <label className="label">Age</label>
+                <input
+                  type="number"
+                  className="field"
+                  value={inputs.age}
+                  onChange={(e) => setInputs({ ...inputs, age: Number(e.target.value) })}
+                />
+              </div>
 
-              <div><label className="label">Monthly Income (Post-tax)</label><input type="number" className="field" value={inputs.monthlyIncome} onChange={(e) => setInputs({ ...inputs, monthlyIncome: Number(e.target.value) })} /></div>
+              <div>
+                <label className="label">Monthly Income (Post-tax)</label>
+                <input
+                  type="number"
+                  className="field"
+                  value={inputs.monthlyIncome}
+                  onChange={(e) =>
+                    setInputs({ ...inputs, monthlyIncome: Number(e.target.value) })
+                  }
+                />
+              </div>
               <div>
                 <label className="label">City Tier</label>
-                <select className="field" value={inputs.cityTier} onChange={(e) => setInputs({ ...inputs, cityTier: e.target.value as any })}>
-                  <option>Tier 1 (Metro)</option><option>Tier 2</option><option>Tier 3</option>
+                <select
+                  className="field"
+                  value={inputs.cityTier}
+                  onChange={(e) => setInputs({ ...inputs, cityTier: e.target.value as any })}
+                >
+                  <option>Tier 1 (Metro)</option>
+                  <option>Tier 2</option>
+                  <option>Tier 3</option>
                 </select>
               </div>
 
-              <div><label className="label">Number of Dependents</label><input type="number" className="field" value={inputs.dependents} onChange={(e) => setInputs({ ...inputs, dependents: Number(e.target.value) })} /></div>
+              <div>
+                <label className="label">Number of Dependents</label>
+                <input
+                  type="number"
+                  className="field"
+                  value={inputs.dependents}
+                  onChange={(e) =>
+                    setInputs({ ...inputs, dependents: Number(e.target.value) })
+                  }
+                />
+              </div>
               <div>
                 <label className="label">Risk Tolerance</label>
-                <select className="field" value={inputs.riskTolerance} onChange={(e) => setInputs({ ...inputs, riskTolerance: e.target.value as any })}>
-                  <option>Conservative</option><option>Moderate</option><option>Aggressive</option>
+                <select
+                  className="field"
+                  value={inputs.riskTolerance}
+                  onChange={(e) =>
+                    setInputs({ ...inputs, riskTolerance: e.target.value as any })
+                  }
+                >
+                  <option>Conservative</option>
+                  <option>Moderate</option>
+                  <option>Aggressive</option>
                 </select>
               </div>
 
-              <div><label className="label">Current Monthly Expenses</label><input type="number" className="field" value={inputs.currentExpenses} onChange={(e) => setInputs({ ...inputs, currentExpenses: Number(e.target.value) })} /></div>
-              <div><label className="label">Existing Emergency Fund</label><input type="number" className="field" value={inputs.existingEmergencyFund} onChange={(e) => setInputs({ ...inputs, existingEmergencyFund: Number(e.target.value) })} /></div>
+              <div>
+                <label className="label">Current Monthly Expenses</label>
+                <input
+                  type="number"
+                  className="field"
+                  value={inputs.currentExpenses}
+                  onChange={(e) =>
+                    setInputs({ ...inputs, currentExpenses: Number(e.target.value) })
+                  }
+                />
+              </div>
+              <div>
+                <label className="label">Existing Emergency Fund</label>
+                <input
+                  type="number"
+                  className="field"
+                  value={inputs.existingEmergencyFund}
+                  onChange={(e) =>
+                    setInputs({
+                      ...inputs,
+                      existingEmergencyFund: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
 
-              <div><label className="label">Existing Term Insurance Cover</label><input type="number" className="field" value={inputs.existingTermInsurance} onChange={(e) => setInputs({ ...inputs, existingTermInsurance: Number(e.target.value) })} /></div>
-              <div><label className="label">Existing Health Insurance Cover</label><input type="number" className="field" value={inputs.existingHealthInsurance} onChange={(e) => setInputs({ ...inputs, existingHealthInsurance: Number(e.target.value) })} /></div>
+              <div>
+                <label className="label">Existing Term Insurance Cover</label>
+                <input
+                  type="number"
+                  className="field"
+                  value={inputs.existingTermInsurance}
+                  onChange={(e) =>
+                    setInputs({
+                      ...inputs,
+                      existingTermInsurance: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
+              <div>
+                <label className="label">Existing Health Insurance Cover</label>
+                <input
+                  type="number"
+                  className="field"
+                  value={inputs.existingHealthInsurance}
+                  onChange={(e) =>
+                    setInputs({
+                      ...inputs,
+                      existingHealthInsurance: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
 
-              <div><label className="label">Outstanding Loans (EMI / month)</label><input type="number" className="field" value={inputs.loanEMI} onChange={(e) => setInputs({ ...inputs, loanEMI: Number(e.target.value) })} /></div>
-              <div><label className="label">Current Investments Value</label><input type="number" className="field" value={inputs.currentInvestments} onChange={(e) => setInputs({ ...inputs, currentInvestments: Number(e.target.value) })} /></div>
+              <div>
+                <label className="label">Outstanding Loans (EMI / month)</label>
+                <input
+                  type="number"
+                  className="field"
+                  value={inputs.loanEMI}
+                  onChange={(e) =>
+                    setInputs({ ...inputs, loanEMI: Number(e.target.value) })
+                  }
+                />
+              </div>
+              <div>
+                <label className="label">Current Investments Value</label>
+                <input
+                  type="number"
+                  className="field"
+                  value={inputs.currentInvestments}
+                  onChange={(e) =>
+                    setInputs({
+                      ...inputs,
+                      currentInvestments: Number(e.target.value),
+                    })
+                  }
+                />
+              </div>
 
-              <div><label className="label">Retirement Age Goal</label><input type="number" className="field" value={inputs.retirementAge} onChange={(e) => setInputs({ ...inputs, retirementAge: Number(e.target.value) })} /></div>
-              <div><label className="label">Current PF/EPF Balance</label><input type="number" className="field" value={inputs.epfBalance} onChange={(e) => setInputs({ ...inputs, epfBalance: Number(e.target.value) })} /></div>
+              <div>
+                <label className="label">Retirement Age Goal</label>
+                <input
+                  type="number"
+                  className="field"
+                  value={inputs.retirementAge}
+                  onChange={(e) =>
+                    setInputs({ ...inputs, retirementAge: Number(e.target.value) })
+                  }
+                />
+              </div>
+              <div>
+                <label className="label">Current PF/EPF Balance</label>
+                <input
+                  type="number"
+                  className="field"
+                  value={inputs.epfBalance}
+                  onChange={(e) =>
+                    setInputs({ ...inputs, epfBalance: Number(e.target.value) })
+                  }
+                />
+              </div>
             </div>
 
             {/* gentle nudge to investments */}
             <div className="mt-4 text-sm text-gray-600">
-              Want a detailed breakdown? <button className="text-brand-primary underline" onClick={() => setActiveTab('investment')}>Add your SIPs and asset buckets →</button>
+              Want a detailed breakdown?{' '}
+              <button
+                className="text-brand-primary underline"
+                onClick={() => setActiveTab('investment')}
+              >
+                Add your SIPs and asset buckets →
+              </button>
             </div>
 
             <div className="mt-8 flex gap-4">
-              <button onClick={handleSave} className="btn-primary px-8 py-3">Calculate Financial Plan</button>
-              <button onClick={() => setInputs(defaultInputs)} className="btn-ghost px-8 py-3">Reset</button>
+              <button onClick={handleSave} className="btn-primary px-8 py-3">
+                Calculate Financial Plan
+              </button>
+              <button onClick={() => setInputs(defaultInputs)} className="btn-ghost px-8 py-3">
+                Reset
+              </button>
             </div>
           </div>
         )}
@@ -304,7 +488,13 @@ export default function Home() {
 
             {/* CTA to complete investments */}
             <div className="text-sm text-gray-600">
-              Improve accuracy: <button className="text-brand-primary underline" onClick={() => setActiveTab('investment')}>add your current SIPs and assets →</button>
+              Improve accuracy:{' '}
+              <button
+                className="text-brand-primary underline"
+                onClick={() => setActiveTab('investment')}
+              >
+                add your current SIPs and assets →
+              </button>
             </div>
           </div>
         )}
@@ -315,22 +505,56 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Budget Allocation Analysis</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-3">
-                <div className="flex justify-between mb-1"><span>Needs (50%)</span><span className="font-medium">{formatCurrency(budget.needs)}</span></div>
-                <div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-blue-500 h-2 rounded-full" style={{ width: '50%' }} /></div>
+                <div className="flex justify-between mb-1">
+                  <span>Needs (50%)</span>
+                  <span className="font-medium">{formatCurrency(budget.needs)}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-blue-500 h-2 rounded-full" style={{ width: '50%' }} />
+                </div>
 
-                <div className="flex justify-between mb-1 mt-4"><span>Wants (30%)</span><span className="font-medium">{formatCurrency(budget.wants)}</span></div>
-                <div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-green-500 h-2 rounded-full" style={{ width: '30%' }} /></div>
+                <div className="flex justify-between mb-1 mt-4">
+                  <span>Wants (30%)</span>
+                  <span className="font-medium">{formatCurrency(budget.wants)}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-green-500 h-2 rounded-full" style={{ width: '30%' }} />
+                </div>
 
-                <div className="flex justify-between mb-1 mt-4"><span>Savings (20%)</span><span className="font-medium">{formatCurrency(budget.savings)}</span></div>
-                <div className="w-full bg-gray-200 rounded-full h-2"><div className="bg-purple-500 h-2 rounded-full" style={{ width: '20%' }} /></div>
+                <div className="flex justify-between mb-1 mt-4">
+                  <span>Savings (20%)</span>
+                  <span className="font-medium">{formatCurrency(budget.savings)}</span>
+                </div>
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div className="bg-purple-500 h-2 rounded-full" style={{ width: '20%' }} />
+                </div>
               </div>
 
               <div className="space-y-2 bg-gray-50 rounded-lg p-4">
-                <div className="flex justify-between"><span>Total Monthly Income</span><span className="font-medium">{formatCurrency(budget.totalIncome)}</span></div>
-                <div className="flex justify-between"><span>Current Expenses + EMI</span><span className="font-medium">{formatCurrency(budget.currentExpenses)}</span></div>
-                <div className="flex justify-between"><span>Current Savings</span><span className="font-medium">{formatCurrency(budget.currentSavings)}</span></div>
-                <div className="flex justify-between border-t pt-2"><span className="font-semibold">Savings Rate</span><span className="font-bold text-lg">{budget.savingsRate.toFixed(1)}%</span></div>
-                <div className={cn('text-sm', budget.status.indexOf('✓') >= 0 ? 'text-green-600' : 'text-orange-600')}>{budget.status}</div>
+                <div className="flex justify-between">
+                  <span>Total Monthly Income</span>
+                  <span className="font-medium">{formatCurrency(budget.totalIncome)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Current Expenses + EMI</span>
+                  <span className="font-medium">{formatCurrency(budget.currentExpenses)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Current Savings</span>
+                  <span className="font-medium">{formatCurrency(budget.currentSavings)}</span>
+                </div>
+                <div className="flex justify-between border-t pt-2">
+                  <span className="font-semibold">Savings Rate</span>
+                  <span className="font-bold text-lg">{budget.savingsRate.toFixed(1)}%</span>
+                </div>
+                <div
+                  className={cn(
+                    'text-sm',
+                    budget.status.indexOf('✓') >= 0 ? 'text-green-600' : 'text-orange-600'
+                  )}
+                >
+                  {budget.status}
+                </div>
               </div>
             </div>
           </div>
@@ -362,13 +586,18 @@ export default function Home() {
             {/* Essential expenses note */}
             <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
               <p className="text-sm text-blue-700">
-                <strong>Essential Monthly Expenses:</strong> {formatCurrency(ef.essentialExpenses)}<br />
+                <strong>Essential Monthly Expenses:</strong> {formatCurrency(ef.essentialExpenses)}
+                <br />
                 <span className="text-xs">(70% of expenses + EMI)</span>
               </p>
             </div>
 
             {/* Clickable target cards */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6" role="tablist" aria-label="Emergency fund target selection">
+            <div
+              className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6"
+              role="tablist"
+              aria-label="Emergency fund target selection"
+            >
               <button
                 type="button"
                 role="tab"
@@ -382,7 +611,9 @@ export default function Home() {
                 )}
               >
                 <div className="text-sm text-gray-600">Conservative (12 mo)</div>
-                <div className="text-xl font-bold mt-2">{formatCurrency(ef.conservativeTarget)}</div>
+                <div className="text-xl font-bold mt-2">
+                  {formatCurrency(ef.conservativeTarget)}
+                </div>
               </button>
 
               <button
@@ -398,7 +629,9 @@ export default function Home() {
                 )}
               >
                 <div className="text-sm text-gray-600">Recommended (9 mo)</div>
-                <div className="text-xl font-bold mt-2">{formatCurrency(ef.recommendedTarget)}</div>
+                <div className="text-xl font-bold mt-2">
+                  {formatCurrency(ef.recommendedTarget)}
+                </div>
               </button>
 
               <button
@@ -426,14 +659,23 @@ export default function Home() {
               </div>
               <div className="flex justify-between items-center">
                 <span className="font-medium">Gap to Fill (Selected Target)</span>
-                <span className="text-lg font-bold text-orange-600">{formatCurrency(selectedEfGap)}</span>
+                <span className="text-lg font-bold text-orange-600">
+                  {formatCurrency(selectedEfGap)}
+                </span>
               </div>
               <div>
                 <div className="flex justify-between mb-2">
-                  <span>Completion (vs. Recommended 9 mo)</span><span className="font-bold">{ef.completionPct.toFixed(1)}%</span>
+                  <span>Completion (vs. Recommended 9 mo)</span>
+                  <span className="font-bold">{ef.completionPct.toFixed(1)}%</span>
                 </div>
                 <div className="w-full bg-gray-200 rounded-full h-4">
-                  <div className={cn('h-4 rounded-full', ef.completionPct >= 75 ? 'bg-green-500' : 'bg-orange-500')} style={{ width: `${Math.min(100, ef.completionPct)}%` }} />
+                  <div
+                    className={cn(
+                      'h-4 rounded-full',
+                      ef.completionPct >= 75 ? 'bg-green-500' : 'bg-orange-500'
+                    )}
+                    style={{ width: `${Math.min(100, ef.completionPct)}%` }}
+                  />
                 </div>
                 <div className="text-sm text-right mt-1">{ef.status}</div>
               </div>
@@ -444,23 +686,37 @@ export default function Home() {
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="text-sm text-gray-600">Selected Target</div>
                 <div className="text-xl font-bold mt-1">
-                  {efTargetType === 'min' ? 'Minimum (6 mo)' : efTargetType === 'cons' ? 'Conservative (12 mo)' : 'Recommended (9 mo)'}
+                  {efTargetType === 'min'
+                    ? 'Minimum (6 mo)'
+                    : efTargetType === 'cons'
+                    ? 'Conservative (12 mo)'
+                    : 'Recommended (9 mo)'}
                 </div>
-                <div className="text-sm text-gray-600 mt-1">Amount: {formatCurrency(selectedEfTarget)}</div>
+                <div className="text-sm text-gray-600 mt-1">
+                  Amount: {formatCurrency(selectedEfTarget)}
+                </div>
               </div>
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="text-sm text-gray-600">Gap to Fill</div>
-                <div className="text-2xl font-bold text-orange-600 mt-1">{formatCurrency(selectedEfGap)}</div>
+                <div className="text-2xl font-bold text-orange-600 mt-1">
+                  {formatCurrency(selectedEfGap)}
+                </div>
               </div>
               <div className="bg-blue-50 border-2 border-blue-500 p-4 rounded-lg">
-                <div className="text-sm text-blue-700 font-medium">Monthly to reach in {efMonthsToReach} months</div>
-                <div className="text-2xl font-bold text-blue-700 mt-1">{formatCurrency(selectedEfMonthly)}</div>
+                <div className="text-sm text-blue-700 font-medium">
+                  Monthly to reach in {efMonthsToReach} months
+                </div>
+                <div className="text-2xl font-bold text-blue-700 mt-1">
+                  {formatCurrency(selectedEfMonthly)}
+                </div>
               </div>
             </div>
 
             {/* Parking strategy (for full target) */}
             <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mt-6">
-              <h4 className="font-semibold text-yellow-800 mb-2">Parking Strategy (for full target)</h4>
+              <h4 className="font-semibold text-yellow-800 mb-2">
+                Parking Strategy (for full target)
+              </h4>
               <ul className="text-sm text-yellow-700 space-y-1">
                 <li>• 50% in Savings Account ({formatCurrency(ef.recommendedTarget * 0.5)})</li>
                 <li>• 50% in Liquid Mutual Funds ({formatCurrency(ef.recommendedTarget * 0.5)})</li>
@@ -482,24 +738,58 @@ export default function Home() {
                   <div className="space-y-3">
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm text-gray-600">Method 1: Income Replacement</div>
-                      <div className="text-lg font-bold">{formatCurrency(insurance.term.method1)}</div>
-                      <div className="text-xs text-gray-500">{insurance.term.multiplier}x annual income</div>
+                      <div className="text-lg font-bold">
+                        {formatCurrency(insurance.term.method1)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {insurance.term.multiplier}x annual income
+                      </div>
                     </div>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm text-gray-600">Method 2: Human Life Value</div>
-                      <div className="text-lg font-bold">{formatCurrency(insurance.term.method2)}</div>
-                      <div className="text-xs text-gray-500">{insurance.term.yearsToRetirement} years to retirement</div>
+                      <div className="text-lg font-bold">
+                        {formatCurrency(insurance.term.method2)}
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {insurance.term.yearsToRetirement} years to retirement
+                      </div>
                     </div>
                   </div>
 
                   <div className="bg-blue-50 border-2 border-blue-500 p-6 rounded-lg">
                     <div className="text-sm text-blue-700 font-medium">RECOMMENDED COVER</div>
-                    <div className="text-3xl font-bold text-blue-900 mt-2">{formatCurrency(insurance.term.recommended)}</div>
+                    <div className="text-3xl font-bold text-blue-900 mt-2">
+                      {formatCurrency(insurance.term.recommended)}
+                    </div>
                     <div className="mt-4 space-y-2 text-sm">
-                      <div className="flex justify-between"><span>Your Existing Cover</span><span className="font-medium">{formatCurrency(insurance.term.existing)}</span></div>
-                      <div className="flex justify-between"><span className="font-semibold">Gap to Fill</span><span className="font-bold text-orange-600">{formatCurrency(insurance.term.gap)}</span></div>
-                      <div className="flex justify-between border-t pt-2"><span>Est. Annual Premium</span><span className="font-medium">{formatCurrency(insurance.term.annualPremium)}</span></div>
-                      <div className={cn('text-center py-2 rounded', insurance.term.status.indexOf('✓') >= 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700')}>{insurance.term.status}</div>
+                      <div className="flex justify-between">
+                        <span>Your Existing Cover</span>
+                        <span className="font-medium">
+                          {formatCurrency(insurance.term.existing)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Gap to Fill</span>
+                        <span className="font-bold text-orange-600">
+                          {formatCurrency(insurance.term.gap)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span>Est. Annual Premium</span>
+                        <span className="font-medium">
+                          {formatCurrency(insurance.term.annualPremium)}
+                        </span>
+                      </div>
+                      <div
+                        className={cn(
+                          'text-center py-2 rounded',
+                          insurance.term.status.indexOf('✓') >= 0
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-orange-100 text-orange-700'
+                        )}
+                      >
+                        {insurance.term.status}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -511,24 +801,58 @@ export default function Home() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="space-y-3">
                     <div className="bg-gray-50 p-4 rounded-lg">
-                      <div className="text-sm text-gray-600">Base Cover per Person ({inputs.cityTier})</div>
-                      <div className="text-lg font-bold">{formatCurrency(insurance.health.baseCover)}</div>
+                      <div className="text-sm text-gray-600">
+                        Base Cover per Person ({inputs.cityTier})
+                      </div>
+                      <div className="text-lg font-bold">
+                        {formatCurrency(insurance.health.baseCover)}
+                      </div>
                     </div>
                     <div className="bg-gray-50 p-4 rounded-lg">
                       <div className="text-sm text-gray-600">Family Size</div>
-                      <div className="text-lg font-bold">{insurance.health.familySize} members</div>
-                      <div className="text-xs text-gray-500">Multiplier: {insurance.health.multiplier}x</div>
+                      <div className="text-lg font-bold">
+                        {insurance.health.familySize} members
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        Multiplier: {insurance.health.multiplier}x
+                      </div>
                     </div>
                   </div>
 
                   <div className="bg-green-50 border-2 border-green-500 p-6 rounded-lg">
                     <div className="text-sm text-green-700 font-medium">RECOMMENDED COVER</div>
-                    <div className="text-3xl font-bold text-green-900 mt-2">{formatCurrency(insurance.health.recommended)}</div>
+                    <div className="text-3xl font-bold text-green-900 mt-2">
+                      {formatCurrency(insurance.health.recommended)}
+                    </div>
                     <div className="mt-4 space-y-2 text-sm">
-                      <div className="flex justify-between"><span>Your Existing Cover</span><span className="font-medium">{formatCurrency(insurance.health.existing)}</span></div>
-                      <div className="flex justify-between"><span className="font-semibold">Gap to Fill</span><span className="font-bold text-orange-600">{formatCurrency(insurance.health.gap)}</span></div>
-                      <div className="flex justify-between border-t pt-2"><span>Est. Annual Premium</span><span className="font-medium">{formatCurrency(insurance.health.annualPremium)}</span></div>
-                      <div className={cn('text-center py-2 rounded', insurance.health.status.indexOf('✓') >= 0 ? 'bg-green-100 text-green-700' : 'bg-orange-100 text-orange-700')}>{insurance.health.status}</div>
+                      <div className="flex justify-between">
+                        <span>Your Existing Cover</span>
+                        <span className="font-medium">
+                          {formatCurrency(insurance.health.existing)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span className="font-semibold">Gap to Fill</span>
+                        <span className="font-bold text-orange-600">
+                          {formatCurrency(insurance.health.gap)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between border-t pt-2">
+                        <span>Est. Annual Premium</span>
+                        <span className="font-medium">
+                          {formatCurrency(insurance.health.annualPremium)}
+                        </span>
+                      </div>
+                      <div
+                        className={cn(
+                          'text-center py-2 rounded',
+                          insurance.health.status.indexOf('✓') >= 0
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-orange-100 text-orange-700'
+                        )}
+                      >
+                        {insurance.health.status}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -538,9 +862,20 @@ export default function Home() {
               <div className="border-t pt-6 bg-gray-50 p-6 rounded-lg">
                 <h3 className="font-semibold mb-4">Total Insurance Plan</h3>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div className="text-center"><div className="text-sm text-gray-600">Total Annual Premium</div><div className="text-2xl font-bold">{formatCurrency(insurance.totalAnnualPremium)}</div></div>
-                  <div className="text-center"><div className="text-sm text-gray-600">Monthly Impact</div><div className="text-2xl font-bold">{formatCurrency(insurance.monthlyImpact)}</div></div>
-                  <div className="text-center"><div className="text-sm text-gray-600">% of Income</div><div className="text-2xl font-bold">{insurance.pctOfIncome.toFixed(1)}%</div></div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Total Annual Premium</div>
+                    <div className="text-2xl font-bold">
+                      {formatCurrency(insurance.totalAnnualPremium)}
+                    </div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">Monthly Impact</div>
+                    <div className="text-2xl font-bold">{formatCurrency(insurance.monthlyImpact)}</div>
+                  </div>
+                  <div className="text-center">
+                    <div className="text-sm text-gray-600">% of Income</div>
+                    <div className="text-2xl font-bold">{insurance.pctOfIncome.toFixed(1)}%</div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -554,7 +889,8 @@ export default function Home() {
 
             {/* Baseline pill from Inputs */}
             <div className="text-xs text-gray-600 mb-3">
-              Baseline from Inputs — Investments: {formatCurrency(inputs.currentInvestments)} • EPF: {formatCurrency(inputs.epfBalance)}
+              Baseline from Inputs — Investments: {formatCurrency(inputs.currentInvestments)} • EPF:{' '}
+              {formatCurrency(inputs.epfBalance)}
             </div>
 
             {/* Allocation summary */}
@@ -565,20 +901,33 @@ export default function Home() {
                   <div className="text-lg font-bold">{investment.baseEquityPct}%</div>
                 </div>
                 <div className="bg-gray-50 p-4 rounded-lg">
-                  <div className="text-sm text-gray-600">Risk Adjustment ({inputs.riskTolerance})</div>
-                  <div className="text-lg font-bold">{investment.riskAdjustment > 0 ? '+' : ''}{investment.riskAdjustment}%</div>
+                  <div className="text-sm text-gray-600">
+                    Risk Adjustment ({inputs.riskTolerance})
+                  </div>
+                  <div className="text-lg font-bold">
+                    {investment.riskAdjustment > 0 ? '+' : ''}
+                    {investment.riskAdjustment}%
+                  </div>
                 </div>
               </div>
 
               <div className="card-info p-6 rounded-lg">
                 <div className="grid grid-cols-2 gap-4">
-                  <div><div className="text-sm opacity-90">Equity</div><div className="text-3xl font-bold">{investment.finalEquityPct.toFixed(0)}%</div></div>
-                  <div><div className="text-sm opacity-90">Debt</div><div className="text-3xl font-bold">{investment.finalDebtPct.toFixed(0)}%</div></div>
+                  <div>
+                    <div className="text-sm opacity-90">Equity</div>
+                    <div className="text-3xl font-bold">
+                      {investment.finalEquityPct.toFixed(0)}%
+                    </div>
+                  </div>
+                  <div>
+                    <div className="text-sm opacity-90">Debt</div>
+                    <div className="text-3xl font-bold">{investment.finalDebtPct.toFixed(0)}%</div>
+                  </div>
                 </div>
               </div>
             </div>
 
-            {/* Monthly SIP recommendation vs current SIPs */}
+            {/* Monthly section: benchmark vs real net availability */}
             <div className="border-t pt-6 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="bg-gray-50 p-4 rounded-lg">
                 <div className="text-sm text-gray-600">Recommended Savings (20%)</div>
@@ -588,18 +937,46 @@ export default function Home() {
                 <div className="text-sm text-gray-600">Your Current SIP Outflow</div>
                 <div className="text-xl font-bold">{formatCurrency(totalSipOutflow)}</div>
               </div>
-              <div className={cn('p-4 rounded-lg', additionalSipCapacity > 0 ? 'bg-green-50' : 'bg-orange-50')}>
-                <div className={cn('text-sm', additionalSipCapacity > 0 ? 'text-green-700' : 'text-orange-700')}>
-                  {additionalSipCapacity > 0 ? 'Additional SIP Capacity' : 'Over by'}
+              <div
+                className={cn(
+                  'p-4 rounded-lg',
+                  netAvailable > 0 ? 'bg-green-50' : 'bg-orange-50'
+                )}
+              >
+                <div
+                  className={cn(
+                    'text-sm',
+                    netAvailable > 0 ? 'text-green-700' : 'text-orange-700'
+                  )}
+                >
+                  Available for Investment (net)
                 </div>
-                <div className={cn('text-xl font-bold', additionalSipCapacity > 0 ? 'text-green-700' : 'text-orange-700')}>
-                  {formatCurrency(additionalSipCapacity > 0 ? additionalSipCapacity : sipOverload)}
+                <div
+                  className={cn(
+                    'text-xl font-bold',
+                    netAvailable > 0 ? 'text-green-700' : 'text-orange-700'
+                  )}
+                >
+                  {formatCurrency(netAvailable)}
                 </div>
               </div>
               <div className="bg-blue-50 border-2 border-blue-500 p-4 rounded-lg">
-                <div className="text-sm text-blue-700 font-medium">Suggested Monthly SIP (new money)</div>
-                <div className="text-xl font-bold text-blue-700">{formatCurrency(Math.max(0, additionalSipCapacity))}</div>
+                <div className="text-sm text-blue-700 font-medium">
+                  Suggested Monthly SIP (new money)
+                </div>
+                <div className="text-xl font-bold text-blue-700">
+                  {formatCurrency(suggestedNewSip)}
+                </div>
               </div>
+            </div>
+
+            {/* Footnote clarifying the net formula */}
+            <div className="text-xs text-gray-500 mt-2">
+              Net = Budget savings − EF monthly − Insurance monthly − Current SIPs
+              {' ('}
+              {formatCurrency(budgetSavings)} − {formatCurrency(selectedEfMonthly)} −{' '}
+              {formatCurrency(insuranceMonthly)} − {formatCurrency(totalSipOutflow)}
+              {')'}
             </div>
 
             {/* SIPs: add + list */}
@@ -608,13 +985,41 @@ export default function Home() {
 
               <div className="bg-white border rounded-lg p-4 mb-4">
                 <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-                  <input placeholder="Scheme / Purpose" className="field" value={sipName} onChange={(e) => setSipName(e.target.value)} />
-                  <select className="field" value={sipCat} onChange={(e) => setSipCat(e.target.value as SipItem['category'])}>
-                    <option>Equity</option><option>Debt</option><option>Gold</option>
+                  <input
+                    placeholder="Scheme / Purpose"
+                    className="field"
+                    value={sipName}
+                    onChange={(e) => setSipName(e.target.value)}
+                  />
+                  <select
+                    className="field"
+                    value={sipCat}
+                    onChange={(e) =>
+                      setSipCat(e.target.value as SipItem['category'])
+                    }
+                  >
+                    <option>Equity</option>
+                    <option>Debt</option>
+                    <option>Gold</option>
                   </select>
-                  <input type="number" placeholder="Monthly ₹" className="field" value={sipMonthly} onChange={(e) => setSipMonthly(e.target.value === '' ? '' : Number(e.target.value))} />
-                  <input type="month" className="field" value={sipStart} onChange={(e) => setSipStart(e.target.value)} />
-                  <button className="btn-primary" onClick={addSip}>Add SIP</button>
+                  <input
+                    type="number"
+                    placeholder="Monthly ₹"
+                    className="field"
+                    value={sipMonthly}
+                    onChange={(e) =>
+                      setSipMonthly(e.target.value === '' ? '' : Number(e.target.value))
+                    }
+                  />
+                  <input
+                    type="month"
+                    className="field"
+                    value={sipStart}
+                    onChange={(e) => setSipStart(e.target.value)}
+                  />
+                  <button className="btn-primary" onClick={addSip}>
+                    Add SIP
+                  </button>
                 </div>
               </div>
 
@@ -637,12 +1042,18 @@ export default function Home() {
                         <td className="p-3 text-right">{formatCurrency(r.monthly)}</td>
                         <td className="p-3">{r.start || '-'}</td>
                         <td className="p-3 text-right">
-                          <button className="btn-ghost" onClick={() => removeSip(r.id)}>Remove</button>
+                          <button className="btn-ghost" onClick={() => removeSip(r.id)}>
+                            Remove
+                          </button>
                         </td>
                       </tr>
                     ))}
                     {sips.length === 0 && (
-                      <tr><td className="p-4 text-gray-500" colSpan={5}>No SIPs added yet</td></tr>
+                      <tr>
+                        <td className="p-4 text-gray-500" colSpan={5}>
+                          No SIPs added yet
+                        </td>
+                      </tr>
                     )}
                   </tbody>
                 </table>
@@ -655,13 +1066,32 @@ export default function Home() {
 
               <div className="bg-white border rounded-lg p-4 mb-4">
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-                  <select className="field" value={assetBucket} onChange={(e) => setAssetBucket(e.target.value as AssetItem['bucket'])}>
-                    <option>Equity</option><option>Debt</option><option>Gold</option>
-                    <option>EPF/PPF</option><option>Cash/Liquid</option>
+                  <select
+                    className="field"
+                    value={assetBucket}
+                    onChange={(e) =>
+                      setAssetBucket(e.target.value as AssetItem['bucket'])
+                    }
+                  >
+                    <option>Equity</option>
+                    <option>Debt</option>
+                    <option>Gold</option>
+                    <option>EPF/PPF</option>
+                    <option>Cash/Liquid</option>
                   </select>
-                  <input type="number" placeholder="Amount ₹" className="field" value={assetAmount} onChange={(e) => setAssetAmount(e.target.value === '' ? '' : Number(e.target.value))} />
+                  <input
+                    type="number"
+                    placeholder="Amount ₹"
+                    className="field"
+                    value={assetAmount}
+                    onChange={(e) =>
+                      setAssetAmount(e.target.value === '' ? '' : Number(e.target.value))
+                    }
+                  />
                   <div className="md:col-span-1" />
-                  <button className="btn-primary" onClick={addAsset}>Add Asset</button>
+                  <button className="btn-primary" onClick={addAsset}>
+                    Add Asset
+                  </button>
                 </div>
               </div>
 
@@ -680,12 +1110,18 @@ export default function Home() {
                         <td className="p-3">{a.bucket}</td>
                         <td className="p-3 text-right">{formatCurrency(a.amount)}</td>
                         <td className="p-3 text-right">
-                          <button className="btn-ghost" onClick={() => removeAsset(a.id)}>Remove</button>
+                          <button className="btn-ghost" onClick={() => removeAsset(a.id)}>
+                            Remove
+                          </button>
                         </td>
                       </tr>
                     ))}
                     {assets.length === 0 && (
-                      <tr><td className="p-4 text-gray-500" colSpan={3}>No assets added yet</td></tr>
+                      <tr>
+                        <td className="p-4 text-gray-500" colSpan={3}>
+                          No assets added yet
+                        </td>
+                      </tr>
                     )}
                   </tbody>
                 </table>
@@ -695,19 +1131,28 @@ export default function Home() {
                 <div className="bg-gray-50 p-4 rounded-lg">
                   <div className="text-sm text-gray-600">Current Allocation</div>
                   <div className="mt-2 text-sm">
-                    Equity: {curEqPct.toFixed(1)}% • Debt+Cash+EPF: {curDebtPct.toFixed(1)}% • Gold: {(100 - curEqPct - curDebtPct).toFixed(1)}%
+                    Equity: {curEqPct.toFixed(1)}% • Debt+Cash+EPF: {curDebtPct.toFixed(1)}% • Gold:{' '}
+                    {(100 - curEqPct - curDebtPct).toFixed(1)}%
                   </div>
                 </div>
                 <div className="bg-blue-50 p-4 rounded-lg">
                   <div className="text-sm text-blue-700 font-medium">Target Allocation</div>
-                  <div className="mt-2 text-sm">Equity: {targetEq.toFixed(0)}% • Debt: {targetDebt.toFixed(0)}%</div>
+                  <div className="mt-2 text-sm">
+                    Equity: {targetEq.toFixed(0)}% • Debt: {targetDebt.toFixed(0)}%
+                  </div>
                 </div>
                 <div className="bg-green-50 p-4 rounded-lg">
                   <div className="text-sm text-green-700 font-medium">New Money Guidance</div>
                   <div className="mt-2 text-sm">
-                    {needMoreEquity && <div>• Direct most fresh SIPs to Equity until ~{targetEq.toFixed(0)}%</div>}
-                    {needMoreDebt && <div>• Add to Debt/PPF/EPF until ~{targetDebt.toFixed(0)}%</div>}
-                    {!needMoreEquity && !needMoreDebt && <div>• Allocation on target — split new money by target weights</div>}
+                    {needMoreEquity && (
+                      <div>• Direct most fresh SIPs to Equity until ~{targetEq.toFixed(0)}%</div>
+                    )}
+                    {needMoreDebt && (
+                      <div>• Add to Debt/PPF/EPF until ~{targetDebt.toFixed(0)}%</div>
+                    )}
+                    {!needMoreEquity && !needMoreDebt && (
+                      <div>• Allocation on target — split new money by target weights</div>
+                    )}
                   </div>
                 </div>
               </div>
@@ -721,37 +1166,96 @@ export default function Home() {
             <h2 className="text-2xl font-bold text-gray-900 mb-6">Retirement Planning</h2>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg text-center"><div className="text-sm text-gray-600">Current Age</div><div className="text-2xl font-bold">{retirement.currentAge} years</div></div>
-              <div className="bg-blue-50 p-4 rounded-lg text-center"><div className="text-sm text-blue-700">Retirement Age</div><div className="text-2xl font-bold text-blue-700">{retirement.retirementAge} years</div></div>
-              <div className="bg-gray-50 p-4 rounded-lg text-center"><div className="text-sm text-gray-600">Years to Retirement</div><div className="text-2xl font-bold">{retirement.yearsToRetirement} years</div></div>
+              <div className="bg-gray-50 p-4 rounded-lg text-center">
+                <div className="text-sm text-gray-600">Current Age</div>
+                <div className="text-2xl font-bold">{retirement.currentAge} years</div>
+              </div>
+              <div className="bg-blue-50 p-4 rounded-lg text-center">
+                <div className="text-sm text-blue-700">Retirement Age</div>
+                <div className="text-2xl font-bold text-blue-700">
+                  {retirement.retirementAge} years
+                </div>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg text-center">
+                <div className="text-sm text-gray-600">Years to Retirement</div>
+                <div className="text-2xl font-bold">{retirement.yearsToRetirement} years</div>
+              </div>
             </div>
 
             <div className="border-t pt-6 grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-3">
-                <div className="bg-gray-50 p-4 rounded-lg"><div className="text-sm text-gray-600">Current Monthly Expenses</div><div className="text-lg font-bold">{formatCurrency(retirement.currentExpenses)}</div></div>
-                <div className="bg-gray-50 p-4 rounded-lg"><div className="text-sm text-gray-600">Monthly Need at Retirement (inflated)</div><div className="text-lg font-bold">{formatCurrency(retirement.futureMonthlyExpense)}</div><div className="text-xs text-gray-500">At 6% inflation for {retirement.yearsToRetirement} years</div></div>
-                <div className="bg-gray-50 p-4 rounded-lg"><div className="text-sm text-gray-600">Expected Years in Retirement</div><div className="text-lg font-bold">{retirement.postRetirementYears} years</div><div className="text-xs text-gray-500">Assuming life expectancy of 85 years</div></div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Current Monthly Expenses</div>
+                  <div className="text-lg font-bold">
+                    {formatCurrency(retirement.currentExpenses)}
+                  </div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Monthly Need at Retirement (inflated)</div>
+                  <div className="text-lg font-bold">
+                    {formatCurrency(retirement.futureMonthlyExpense)}
+                  </div>
+                  <div className="text-xs text-gray-500">
+                    At 6% inflation for {retirement.yearsToRetirement} years
+                  </div>
+                </div>
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="text-sm text-gray-600">Expected Years in Retirement</div>
+                  <div className="text-lg font-bold">{retirement.postRetirementYears} years</div>
+                  <div className="text-xs text-gray-500">Assuming life expectancy of 85 years</div>
+                </div>
               </div>
 
               <div className="card-warn p-6 rounded-lg">
                 <div className="text-sm opacity-90">CORPUS NEEDED AT RETIREMENT</div>
-                <div className="text-4xl font-bold mt-4">{formatCurrency(retirement.corpusNeeded)}</div>
-                <div className="text-xs opacity-90 mt-2">Annual Expense: {formatCurrency(retirement.futureAnnualExpense)}</div>
+                <div className="text-4xl font-bold mt-4">
+                  {formatCurrency(retirement.corpusNeeded)}
+                </div>
+                <div className="text-xs opacity-90 mt-2">
+                  Annual Expense: {formatCurrency(retirement.futureAnnualExpense)}
+                </div>
               </div>
             </div>
 
             <div className="border-t pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-blue-50 p-4 rounded-lg"><div className="text-sm text-blue-700">Current Investments (FV)</div><div className="text-xl font-bold text-blue-700">{formatCurrency(retirement.currentInvestmentsFV)}</div></div>
-              <div className="bg-green-50 p-4 rounded-lg"><div className="text-sm text-green-700">EPF Balance (FV)</div><div className="text-xl font-bold text-green-700">{formatCurrency(retirement.epfFV)}</div></div>
-              <div className="bg-purple-50 p-4 rounded-lg"><div className="text-sm text-purple-700">Total Future Value</div><div className="text-xl font-bold text-purple-700">{formatCurrency(retirement.totalFV)}</div></div>
+              <div className="bg-blue-50 p-4 rounded-lg">
+                <div className="text-sm text-blue-700">Current Investments (FV)</div>
+                <div className="text-xl font-bold text-blue-700">
+                  {formatCurrency(retirement.currentInvestmentsFV)}
+                </div>
+              </div>
+              <div className="bg-green-50 p-4 rounded-lg">
+                <div className="text-sm text-green-700">EPF Balance (FV)</div>
+                <div className="text-xl font-bold text-green-700">
+                  {formatCurrency(retirement.epfFV)}
+                </div>
+              </div>
+              <div className="bg-purple-50 p-4 rounded-lg">
+                <div className="text-sm text-purple-700">Total Future Value</div>
+                <div className="text-xl font-bold text-purple-700">
+                  {formatCurrency(retirement.totalFV)}
+                </div>
+              </div>
             </div>
 
             <div className="border-t pt-6 grid grid-cols-1 md:grid-cols-3 gap-4">
-              <div className="bg-gray-50 p-4 rounded-lg"><div className="text-sm text-gray-600">Corpus Needed</div><div className="text-xl font-bold">{formatCurrency(retirement.corpusNeeded)}</div></div>
-              <div className="bg-gray-50 p-4 rounded-lg"><div className="text-sm text-gray-600">Existing Assets (FV)</div><div className="text-xl font-bold">{formatCurrency(retirement.totalFV)}</div></div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="text-sm text-gray-600">Corpus Needed</div>
+                <div className="text-xl font-bold">
+                  {formatCurrency(retirement.corpusNeeded)}
+                </div>
+              </div>
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <div className="text-sm text-gray-600">Existing Assets (FV)</div>
+                <div className="text-xl font-bold">{formatCurrency(retirement.totalFV)}</div>
+              </div>
               <div className={cn('p-4 rounded-lg', retirement.gap === 0 ? 'bg-green-100' : 'bg-orange-100')}>
-                <div className={cn('text-sm', retirement.gap === 0 ? 'text-green-700' : 'text-orange-700')}>Gap to Fill</div>
-                <div className={cn('text-xl font-bold', retirement.gap === 0 ? 'text-green-700' : 'text-orange-700')}>{formatCurrency(retirement.gap)}</div>
+                <div className={cn('text-sm', retirement.gap === 0 ? 'text-green-700' : 'text-orange-700')}>
+                  Gap to Fill
+                </div>
+                <div className={cn('text-xl font-bold', retirement.gap === 0 ? 'text-green-700' : 'text-orange-700')}>
+                  {formatCurrency(retirement.gap)}
+                </div>
                 <div className="text-xs mt-1">{retirement.status}</div>
               </div>
             </div>
@@ -761,12 +1265,21 @@ export default function Home() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <div className="text-sm opacity-90">To achieve retirement corpus</div>
-                  <div className="text-4xl font-bold mt-2">{formatCurrency(retirement.monthlySIPNeeded)}</div>
+                  <div className="text-4xl font-bold mt-2">
+                    {formatCurrency(retirement.monthlySIPNeeded)}
+                  </div>
                 </div>
                 <div>
                   <div className="text-sm opacity-90">As % of current income</div>
-                  <div className="text-4xl font-bold mt-2">{retirement.sipPctOfIncome.toFixed(1)}%</div>
-                  <div className={cn('text-sm mt-2 px-3 py-1 rounded inline-block', retirement.sipPctOfIncome <= 15 ? 'bg-green-500' : 'bg-orange-500')}>
+                  <div className="text-4xl font-bold mt-2">
+                    {retirement.sipPctOfIncome.toFixed(1)}%
+                  </div>
+                  <div
+                    className={cn(
+                      'text-sm mt-2 px-3 py-1 rounded inline-block',
+                      retirement.sipPctOfIncome <= 15 ? 'bg-green-500' : 'bg-orange-500'
+                    )}
+                  >
                     {retirement.sipPctOfIncome <= 15 ? '✓ Good' : '⚠ Increase Savings'}
                   </div>
                 </div>
@@ -788,66 +1301,10 @@ export default function Home() {
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              <ScoreCard title="1. Savings Rate (25%)" score={healthScore.savingsScore} subtitle={`Current: ${healthScore.savingsRate.toFixed(1)}%`} />
-              <ScoreCard title="2. Emergency Fund (20%)" score={healthScore.efScore} subtitle={`Completion: ${healthScore.efCompletion.toFixed(1)}%`} />
-              <ScoreCard title="3. Insurance (25%)" score={healthScore.insuranceScore} subtitle={`Term: ${healthScore.termCoverage.toFixed(0)}% | Health: ${healthScore.healthCoverage.toFixed(0)}%`} />
-              <ScoreCard title="4. Debt Management (15%)" score={healthScore.debtScore} subtitle={`EMI: ${healthScore.emiPct.toFixed(1)}% of income`} />
-              <ScoreCard title="5. Investments (15%)" score={healthScore.investmentScore} subtitle={`Current: ${formatCurrency(healthScore.currentInvestments)}`} />
-            </div>
-          </div>
-        )}
-
-        {!calculated && activeTab !== 'inputs' && (
-          <div className="bg-yellow-50 border-l-4 border-yellow-500 p-6 rounded">
-            <p className="text-yellow-800">
-              Please fill in your information in the Inputs tab and click "Calculate Financial Plan" to see your results here.
-            </p>
-          </div>
-        )}
-      </main>
-
-      {/* Footer */}
-      <footer className="bg-gray-800 text-white mt-16 py-8">
-        <div className="max-w-7xl mx-auto px-4 text-center">
-          <p className="text-gray-300">© 2025 Personal Finance Planner for India</p>
-          <p className="text-gray-400 text-sm mt-2">
-            Built with ❤️ for Indian families | All calculations are estimates - consult a financial advisor for personalized advice
-          </p>
-        </div>
-      </footer>
-    </div>
-  );
-}
-
-function ScoreCard({
-  title,
-  score,
-  subtitle,
-}: {
-  title: string;
-  score: number;
-  subtitle: string;
-}) {
-  const bar =
-    score >= 80 ? 'bg-green-500' : score >= 60 ? 'bg-yellow-500' : 'bg-orange-500';
-
-  return (
-    <div className="border rounded-lg p-4">
-      <div className="flex justify-between items-center mb-2">
-        <span className="font-medium">{title}</span>
-      </div>
-
-      <div className="mb-2">
-        <div className="text-2xl font-bold">{score.toFixed(0)}/100</div>
-        <div className="text-sm text-gray-600">{subtitle}</div>
-      </div>
-
-      <div className="w-full bg-gray-200 rounded-full h-2">
-        <div
-          className={cn('h-2 rounded-full', bar)}
-          style={{ width: `${Math.max(0, Math.min(100, score))}%` }}
-        />
-      </div>
-    </div>
-  );
-}
+              <ScoreCard
+                title="1. Savings Rate (25%)"
+                score={healthScore.savingsScore}
+                subtitle={`Current: ${healthScore.savingsRate.toFixed(1)}%`}
+              />
+              <ScoreCard
+                title
