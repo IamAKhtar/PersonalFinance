@@ -1,33 +1,53 @@
+// app/components/tabs/InvestmentTab.tsx
+'use client';
+
 import { useEffect, useState } from 'react';
 import type { MutualFund } from '../../../data/products.types';
 import { calculateInvestment } from '../../lib/calculations';
 import { selectSIPBasket } from '../../lib/productSelector';
-import { cn, uid, formatCurrency, SipItem, AssetItem } from './types';
+import { cn, formatCurrency, uid, SipItem, AssetItem } from './types';
 
 export default function InvestmentTab() {
-  // inputs, ef, insurance from context/hooks
-  const investment = calculateInvestment(/* inputs */, /* ef.gap */);
+  // Assuming inputs and efGap are passed down or accessed via context/hook
+  const inputs = {}; // replace with actual inputs state
+  const efGap = 0;    // replace with ef.gap
+  
+  // Calculate investment recommendations
+  const investment = calculateInvestment(inputs as any, efGap);
+
+  // Load mutual funds data
   const [mutualFunds, setMutualFunds] = useState<MutualFund[]>([]);
-  const [dataAsOf, setDataAsOf] = useState('');
+  const [dataAsOf, setDataAsOf] = useState<string>('');
 
   useEffect(() => {
-    fetch('/data/mutual_funds.json').then(r=>r.json()).then(d=>{ setMutualFunds(d.mutual_funds); setDataAsOf(d.as_of); });
+    fetch('/data/mutual_funds.json')
+      .then((res) => res.json())
+      .then((data) => {
+        setMutualFunds(data.mutual_funds || []);
+        setDataAsOf(data.as_of || '');
+      });
   }, []);
 
-  // derive netAvailable from hooks or props
-  const netAvailable = 25000; // example
-  const targetEq = investment.finalEquityPct;
-  const targetDebt = investment.finalDebtPct;
+  // Derive net available (example values used here)
+  const netAvailable = 0; // replace with real net available calculation
 
-  const suggestions = selectSIPBasket(mutualFunds, targetEq, targetDebt, /* inputs.riskTolerance */'Moderate', netAvailable);
+  // Suggestions
+  const suggestions = selectSIPBasket(
+    mutualFunds,
+    investment.finalEquityPct,
+    investment.finalDebtPct,
+    (inputs as any).riskTolerance || 'Moderate',
+    netAvailable
+  );
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-6">Investment Allocation Strategy</h2>
-      {/* Existing allocation UI */}
+      <h2 className="text-2xl font-bold mb-4">Investment Allocation Strategy</h2>
+
+      {/* Allocation summary and monthly metrics omitted for brevity */}
 
       {/* Suggested SIP Basket */}
-      {suggestions.length>0 && (
+      {suggestions.length > 0 && (
         <div className="border-t pt-6">
           <div className="flex justify-between mb-2">
             <h3 className="font-semibold">💡 Suggested SIP Basket</h3>
@@ -44,8 +64,8 @@ export default function InvestmentTab() {
               </tr>
             </thead>
             <tbody>
-              {suggestions.map((s,i)=>(
-                <tr key={i} className="border-t hover:bg-gray-50">
+              {suggestions.map((s, idx) => (
+                <tr key={idx} className="border-t hover:bg-gray-50">
                   <td className="p-3 font-medium">{s.fund.name}</td>
                   <td className="p-3">{s.fund.category}</td>
                   <td className="p-3 text-right">{s.allocation_pct.toFixed(1)}%</td>
