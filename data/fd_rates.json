@@ -1,0 +1,66 @@
+{
+  "data_version": "1.0",
+  "as_of": "2025-10-20",
+  "fd_rates": [
+    {
+      "id": "fd_001",
+      "institution": "State Bank of India",
+      "rating_band": "Government",
+      "tenure_min_m": 12,
+      "tenure_max_m": 120,
+      "rate_general": 6.8,
+      "rate_senior": 7.3,
+      "compounding": "Quarterly",
+      "premature_penalty_notes": "1% penalty on applicable rate",
+      "min_amount": 1000
+    },
+    {
+      "id": "fd_002",
+      "institution": "HDFC Bank",
+      "rating_band": "AAA",
+      "tenure_min_m": 12,
+      "tenure_max_m": 120,
+      "rate_general": 7.0,
+      "rate_senior": 7.5,
+      "compounding": "Quarterly",
+      "premature_penalty_notes": "1% penalty on applicable rate",
+      "min_amount": 5000
+    },
+    {
+      "id": "fd_003",
+      "institution": "ICICI Bank",
+      "rating_band": "AAA",
+      "tenure_min_m": 12,
+      "tenure_max_m": 120,
+      "rate_general": 7.0,
+      "rate_senior": 7.5,
+      "compounding": "Quarterly",
+      "premature_penalty_notes": "1% penalty on applicable rate",
+      "min_amount": 10000
+    },
+    {
+      "id": "fd_004",
+      "institution": "Bajaj Finance",
+      "rating_band": "AAA",
+      "tenure_min_m": 12,
+      "tenure_max_m": 60,
+      "rate_general": 8.6,
+      "rate_senior": 8.85,
+      "compounding": "Quarterly",
+      "premature_penalty_notes": "2% penalty on applicable rate",
+      "min_amount": 15000
+    },
+    {
+      "id": "fd_005",
+      "institution": "Mahindra Finance",
+      "rating_band": "AA+",
+      "tenure_min_m": 12,
+      "tenure_max_m": 60,
+      "rate_general": 8.5,
+      "rate_senior": 8.75,
+      "compounding": "Quarterly",
+      "premature_penalty_notes": "2% penalty on applicable rate",
+      "min_amount": 10000
+    }
+  ]
+}

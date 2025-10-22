@@ -1,0 +1,81 @@
+{
+  "data_version": "1.0",
+  "as_of": "2025-10-20",
+  "term_insurance": [
+    {
+      "id": "term_001",
+      "insurer": "HDFC Life",
+      "product": "Click 2 Protect Plus",
+      "claim_settlement_ratio": 98.01,
+      "solvency_ratio": 1.91,
+      "min_sum_insured": 2500000,
+      "max_sum_insured": 500000000,
+      "sample_premium_age_30_1cr": 9600,
+      "riders": [
+        "Critical Illness",
+        "Accidental Death",
+        "Waiver of Premium"
+      ]
+    },
+    {
+      "id": "term_002",
+      "insurer": "ICICI Prudential",
+      "product": "iProtect Smart",
+      "claim_settlement_ratio": 97.82,
+      "solvency_ratio": 1.88,
+      "min_sum_insured": 2500000,
+      "max_sum_insured": 1000000000,
+      "sample_premium_age_30_1cr": 9800,
+      "riders": [
+        "Critical Illness",
+        "Accidental Death",
+        "Accidental Disability"
+      ]
+    },
+    {
+      "id": "term_003",
+      "insurer": "Max Life",
+      "product": "Smart Secure Plus Plan",
+      "claim_settlement_ratio": 99.35,
+      "solvency_ratio": 1.84,
+      "min_sum_insured": 2500000,
+      "max_sum_insured": 500000000,
+      "sample_premium_age_30_1cr": 9200,
+      "riders": [
+        "Critical Illness",
+        "Accidental Death",
+        "Hospital Cash"
+      ]
+    },
+    {
+      "id": "term_004",
+      "insurer": "SBI Life",
+      "product": "eShield",
+      "claim_settlement_ratio": 97.03,
+      "solvency_ratio": 2.03,
+      "min_sum_insured": 2500000,
+      "max_sum_insured": 500000000,
+      "sample_premium_age_30_1cr": 9100,
+      "riders": [
+        "Critical Illness",
+        "Accidental Death Benefit",
+        "Income Benefit"
+      ]
+    },
+    {
+      "id": "term_005",
+      "insurer": "Tata AIA",
+      "product": "Sampoorna Raksha Supreme",
+      "claim_settlement_ratio": 98.52,
+      "solvency_ratio": 2.12,
+      "min_sum_insured": 2500000,
+      "max_sum_insured": 500000000,
+      "sample_premium_age_30_1cr": 9500,
+      "riders": [
+        "Critical Illness",
+        "Accidental Total Permanent Disability",
+        "Waiver of Premium"
+      ]
+    }
+  ]
+}

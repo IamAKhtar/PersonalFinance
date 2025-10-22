@@ -1,0 +1,102 @@
+{
+  "data_version": "1.0",
+  "as_of": "2025-10-20",
+  "health_insurance": [
+    {
+      "id": "health_001",
+      "insurer": "Star Health",
+      "plan": "Family Health Optima Plan",
+      "sum_insured_bands": [
+        300000,
+        500000,
+        1000000,
+        1500000,
+        2500000
+      ],
+      "room_rules": "Single private AC room",
+      "copay": "No copay",
+      "waiting_periods": "30 days (general), 2 years (pre-existing)",
+      "restoration": true,
+      "no_claim_bonus": "50% of sum insured after every claim-free year",
+      "portability_notes": "Seamless portability allowed",
+      "sample_premium_family_float": 22000
+    },
+    {
+      "id": "health_002",
+      "insurer": "HDFC ERGO",
+      "plan": "Optima Secure",
+      "sum_insured_bands": [
+        300000,
+        500000,
+        1000000,
+        1500000,
+        2500000,
+        5000000
+      ],
+      "room_rules": "Single private AC room",
+      "copay": "No copay",
+      "waiting_periods": "30 days (general), 2 years (pre-existing)",
+      "restoration": true,
+      "no_claim_bonus": "100% of sum insured after 2 claim-free years",
+      "portability_notes": "Full portability with credit",
+      "sample_premium_family_float": 24500
+    },
+    {
+      "id": "health_003",
+      "insurer": "Care Health",
+      "plan": "Care Advantage",
+      "sum_insured_bands": [
+        300000,
+        500000,
+        1000000,
+        2000000,
+        3000000
+      ],
+      "room_rules": "Single private AC room",
+      "copay": "No copay for preferred network",
+      "waiting_periods": "30 days (general), 3 years (pre-existing)",
+      "restoration": true,
+      "no_claim_bonus": "50% of sum insured per claim-free year",
+      "portability_notes": "Portability allowed",
+      "sample_premium_family_float": 21000
+    },
+    {
+      "id": "health_004",
+      "insurer": "Niva Bupa",
+      "plan": "Reassure 2.0",
+      "sum_insured_bands": [
+        500000,
+        1000000,
+        1500000,
+        2500000,
+        5000000
+      ],
+      "room_rules": "Single private AC room",
+      "copay": "No copay",
+      "waiting_periods": "30 days (general), 2 years (pre-existing)",
+      "restoration": true,
+      "no_claim_bonus": "100% of sum insured after 2 claim-free years",
+      "portability_notes": "Porting seamless with waiting period credit",
+      "sample_premium_family_float": 26000
+    },
+    {
+      "id": "health_005",
+      "insurer": "ICICI Lombard",
+      "plan": "Health AdvantEdge",
+      "sum_insured_bands": [
+        300000,
+        500000,
+        1000000,
+        1500000,
+        2500000
+      ],
+      "room_rules": "Single private AC room",
+      "copay": "No copay",
+      "waiting_periods": "30 days (general), 2 years (pre-existing)",
+      "restoration": true,
+      "no_claim_bonus": "50% of sum insured per claim-free year",
+      "portability_notes": "Portability allowed",
+      "sample_premium_family_float": 23500
+    }
+  ]
+}

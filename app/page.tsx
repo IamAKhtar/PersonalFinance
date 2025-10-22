@@ -2,6 +2,20 @@
 'use client';
 
 import { useEffect, useState } from 'react';
+
+import type { MutualFund, FDRate, TermInsurance, HealthInsurance } from '../data/products.types';
+import {
+  selectSIPBasket,
+  selectParkingOptions,
+  selectTermInsurance,
+  selectHealthInsurance,
+  type SuggestedSIP,
+  type SuggestedParking,
+  type SuggestedTerm,
+  type SuggestedHealth,
+} from './lib/productSelector';
+
+
 import type { UserInputs } from './types';
 import {
   calculateBudget,
@@ -76,6 +90,14 @@ export default function Home() {
 
   const [assetBucket, setAssetBucket] = useState<AssetItem['bucket']>('Equity');
   const [assetAmount, setAssetAmount] = useState<number | ''>('');
+  
+  // Product data state
+  const [mutualFunds, setMutualFunds] = useState<MutualFund[]>([]);
+  const [fdRates, setFdRates] = useState<FDRate[]>([]);
+  const [termPolicies, setTermPolicies] = useState<TermInsurance[]>([]);
+  const [healthPolicies, setHealthPolicies] = useState<HealthInsurance[]>([]);
+  const [dataAsOf, setDataAsOf] = useState<string>('');
+
 
   useEffect(() => {
     try {
@@ -119,6 +141,25 @@ export default function Home() {
     setActiveTab('dashboard');
   };
 
+  useEffect(() => {
+    // Load product data
+    Promise.all([
+  	fetch('/data/mutual_funds.json').then((r) => r.json()),
+  	fetch('/data/fd_rates.json').then((r) => r.json()),
+  	fetch('/data/term_insurance.json').then((r) => r.json()),
+  	fetch('/data/health_insurance.json').then((r) => r.json()),
+    ])
+  	.then(([mfData, fdData, termData, healthData]) => {
+  	  setMutualFunds(mfData.mutual_funds || []);
+  	  setFdRates(fdData.fd_rates || []);
+  	  setTermPolicies(termData.term_insurance || []);
+  	  setHealthPolicies(healthData.health_insurance || []);
+  	  setDataAsOf(mfData.as_of || '');
+  	})
+  	.catch((err) => console.error('Failed to load product data:', err));
+  }, []);
+
+
   const formatCurrency = (n: number) => `₹${n.toLocaleString('en-IN', { maximumFractionDigits: 0 })}`;
 
   // Core calculations
@@ -127,9 +168,36 @@ export default function Home() {
   const insurance = calculated ? calculateInsurance(inputs) : null;
   const investment = calculated && ef ? calculateInvestment(inputs, ef.gap) : null;
   const retirement = calculated ? calculateRetirement(inputs) : null;
-  const healthScore =
-    calculated && budget && ef && insurance ? calculateHealthScore(inputs, budget, ef, insurance) : null;
+  const healthScore = calculated && budget && ef && insurance ? calculateHealthScore(inputs, budget, ef, insurance) : null;
 
+  // Compute suggestions when data is ready
+  const suggestedSIPs: SuggestedSIP[] =
+  calculated && investment && mutualFunds.length > 0
+  	? selectSIPBasket(
+  		mutualFunds,
+  		investment.finalEquityPct,
+  		investment.finalDebtPct,
+  		inputs.riskTolerance,
+  		suggestedNewSip
+  	)
+  	: [];
+  
+  const suggestedParking: SuggestedParking[] =
+  calculated && ef && mutualFunds.length > 0 && fdRates.length > 0
+  	? selectParkingOptions(mutualFunds, fdRates, efMonthsToReach, selectedEfTarget)
+  	: [];
+  
+  const suggestedTerm: SuggestedTerm[] =
+  calculated && insurance && termPolicies.length > 0 && insurance.term.gap > 0
+  	? selectTermInsurance(termPolicies, insurance.term.recommended)
+  	: [];
+  
+  const suggestedHealth: SuggestedHealth[] =
+  calculated && insurance && healthPolicies.length > 0 && insurance.health.gap > 0
+  	? selectHealthInsurance(healthPolicies, insurance.health.recommended)
+  	: [];
+
+  
   // EF dynamic selection values
   const selectedEfTarget = !ef
     ? 0
@@ -423,6 +491,62 @@ export default function Home() {
                 <li>• 50% in Liquid Mutual Funds ({formatCurrency(ef.recommendedTarget * 0.5)})</li>
               </ul>
             </div>
+			
+			{/* Suggested Parking Options */}
+			{suggestedParking.length > 0 && (
+			<div className="border-t pt-6">
+				<div className="flex items-center justify-between mb-4">
+				<h3 className="text-lg font-semibold">💡 Suggested Parking Options</h3>
+				<span className="text-xs text-gray-500">Data as of {dataAsOf}</span>
+				</div>
+			
+				<div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 mb-4 text-xs text-yellow-800">
+				<strong>Disclaimer:</strong> Curated options for reference. Not financial advice. 
+				Verify rates and terms before investing.
+				</div>
+			
+				<div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+				{suggestedParking.map((p, i) => (
+					<div key={i} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+					<div className="flex items-start justify-between mb-2">
+						<div>
+						<div className="font-semibold">
+							{p.type === 'liquid_fund' ? (p.option as MutualFund).name : (p.option as FDRate).institution}
+						</div>
+						<div className="text-xs text-gray-500">
+							{p.type === 'liquid_fund' ? (p.option as MutualFund).amc : `FD - ${(p.option as FDRate).rating_band}`}
+						</div>
+						</div>
+						<span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">{p.allocation_pct}%</span>
+					</div>
+			
+					<div className="text-2xl font-bold text-brand-primary mb-2">{formatCurrency(p.amount)}</div>
+			
+					<div className="text-xs text-gray-600 mb-2">{p.reason}</div>
+			
+					{p.type === 'liquid_fund' && (
+						<div className="text-xs text-gray-500 space-y-1">
+						<div>Expense Ratio: {(p.option as MutualFund).expense_ratio}%</div>
+						<div>1Y Return: {(p.option as MutualFund).returns_1y?.toFixed(1)}%</div>
+						<div>Min SIP: ₹{(p.option as MutualFund).min_sip.toLocaleString()}</div>
+						</div>
+					)}
+			
+					{p.type === 'fd' && (
+						<div className="text-xs text-gray-500 space-y-1">
+						<div>Rate: {(p.option as FDRate).rate_general}% (General)</div>
+						<div>Senior: {(p.option as FDRate).rate_senior}%</div>
+						<div>Tenure: {(p.option as FDRate).tenure_min_m}-{(p.option as FDRate).tenure_max_m} months</div>
+						</div>
+					)}
+					</div>
+				))}
+				</div>
+			</div>
+			)}
+
+			
+			
           </div>
         )}
 
@@ -451,6 +575,54 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+			  
+			  
+			  {/* Suggested Term Insurance */}
+		      {suggestedTerm.length > 0 && (
+		      <div className="border-t pt-6">
+			      <div className="flex items-center justify-between mb-4">
+			      <h3 className="text-lg font-semibold">💡 Suggested Term Insurance Shortlist</h3>
+			      <span className="text-xs text-gray-500">Data as of {dataAsOf}</span>
+			      </div>
+		      
+			      <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 mb-4 text-xs text-yellow-800">
+			      <strong>Disclaimer:</strong> Sample policies for reference. Premiums vary by age, health, lifestyle. 
+			      Not financial advice. Compare quotes from multiple insurers.
+			      </div>
+		      
+			      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+			      {suggestedTerm.map((t, i) => (
+				      <div key={i} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+				      <div className="font-semibold text-lg mb-1">{t.policy.insurer}</div>
+				      <div className="text-sm text-gray-600 mb-3">{t.policy.product}</div>
+		      
+				      <div className="space-y-2 text-sm">
+					      <div className="flex justify-between">
+					      <span className="text-gray-600">Claim Settlement:</span>
+					      <span className="font-bold text-green-600">{t.policy.claim_settlement_ratio}%</span>
+					      </div>
+					      <div className="flex justify-between">
+					      <span className="text-gray-600">Solvency Ratio:</span>
+					      <span className="font-medium">{t.policy.solvency_ratio}</span>
+					      </div>
+					      <div className="flex justify-between">
+					      <span className="text-gray-600">Max Cover:</span>
+					      <span className="font-medium">{formatCurrency(t.policy.max_sum_insured)}</span>
+					      </div>
+				      </div>
+		      
+				      <div className="mt-3 pt-3 border-t">
+					      <div className="text-xs text-gray-500">Sample Premium (Age 30, ₹1 Cr)</div>
+					      <div className="text-xl font-bold text-brand-primary">{formatCurrency(t.policy.sample_premium_age_30_1cr)}/year</div>
+				      </div>
+		      
+				      <div className="mt-2 text-xs text-gray-500">{t.reason}</div>
+				      </div>
+			      ))}
+			      </div>
+		      </div>
+		      )}
+
 
               {/* Health */}
               <div className="border-t pt-8">
@@ -472,6 +644,55 @@ export default function Home() {
                   </div>
                 </div>
               </div>
+
+
+			  {/* Suggested Health Insurance */}
+			  {suggestedHealth.length > 0 && (
+			  <div className="border-t pt-6">
+			 	 <div className="flex items-center justify-between mb-4">
+			 	 <h3 className="text-lg font-semibold">💡 Suggested Health Insurance Shortlist</h3>
+			 	 <span className="text-xs text-gray-500">Data as of {dataAsOf}</span>
+			 	 </div>
+			  
+			 	 <div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 mb-4 text-xs text-yellow-800">
+			 	 <strong>Disclaimer:</strong> Sample policies for reference. Premiums vary by age, family size, city. 
+			 	 Not financial advice. Compare multiple quotes.
+			 	 </div>
+			  
+			 	 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+			 	 {suggestedHealth.map((h, i) => (
+			 		 <div key={i} className="border rounded-lg p-4 hover:shadow-md transition-shadow">
+			 		 <div className="font-semibold text-lg mb-1">{h.policy.insurer}</div>
+			 		 <div className="text-sm text-gray-600 mb-3">{h.policy.plan}</div>
+			  
+			 		 <div className="space-y-2 text-sm">
+			 			 <div>
+			 			 <span className="text-gray-600">Sum Insured Bands:</span>
+			 			 <div className="text-xs text-gray-500 mt-1">
+			 				 {h.policy.sum_insured_bands.map((b) => formatCurrency(b)).join(', ')}
+			 			 </div>
+			 			 </div>
+			 			 <div>
+			 			 <span className="text-gray-600">Room:</span>
+			 			 <span className="ml-2 text-xs">{h.policy.room_rules}</span>
+			 			 </div>
+			 			 <div>
+			 			 <span className="text-gray-600">Restoration:</span>
+			 			 <span className="ml-2 font-medium">{h.policy.restoration ? 'Yes' : 'No'}</span>
+			 			 </div>
+			 		 </div>
+			  
+			 		 <div className="mt-3 pt-3 border-t">
+			 			 <div className="text-xs text-gray-500">Sample Premium (Family Floater)</div>
+			 			 <div className="text-xl font-bold text-brand-primary">{formatCurrency(h.policy.sample_premium_family_float)}/year</div>
+			 		 </div>
+			  
+			 		 <div className="mt-2 text-xs text-gray-500">{h.reason}</div>
+			 		 </div>
+			 	 ))}
+			 	 </div>
+			  </div>
+			  )}
 
               {/* Totals */}
               <div className="border-t pt-6 bg-gray-50 p-6 rounded-lg">
@@ -601,6 +822,58 @@ export default function Home() {
             </div>
           </div>
         )}
+		
+		{/* Suggested SIP Basket */}
+		{suggestedSIPs.length > 0 && (
+		<div className="border-t pt-6">
+			<div className="flex items-center justify-between mb-4">
+			<h3 className="text-lg font-semibold">💡 Suggested SIP Basket</h3>
+			<span className="text-xs text-gray-500">Data as of {dataAsOf}</span>
+			</div>
+		
+			<div className="bg-yellow-50 border-l-4 border-yellow-500 p-3 mb-4 text-xs text-yellow-800">
+			<strong>Disclaimer:</strong> These are curated suggestions for educational purposes only. 
+			Not financial advice. Verify details with fund houses before investing.
+			</div>
+		
+			<div className="overflow-auto rounded-lg border">
+			<table className="min-w-full text-sm">
+				<thead className="bg-gray-100 text-gray-700">
+				<tr>
+					<th className="text-left p-3">Fund Name</th>
+					<th className="text-left p-3">Category</th>
+					<th className="text-right p-3">Allocation %</th>
+					<th className="text-right p-3">Monthly ₹</th>
+					<th className="text-left p-3">Reason</th>
+					<th className="text-right p-3">Expense Ratio</th>
+				</tr>
+				</thead>
+				<tbody>
+				{suggestedSIPs.map((s, i) => (
+					<tr key={i} className="border-t hover:bg-gray-50">
+					<td className="p-3">
+						<div className="font-medium">{s.fund.name}</div>
+						<div className="text-xs text-gray-500">{s.fund.amc}</div>
+					</td>
+					<td className="p-3">{s.fund.category}</td>
+					<td className="p-3 text-right font-medium">{s.allocation_pct.toFixed(1)}%</td>
+					<td className="p-3 text-right font-bold">{formatCurrency(s.monthly_amount)}</td>
+					<td className="p-3 text-sm text-gray-600">{s.reason}</td>
+					<td className="p-3 text-right text-xs">{s.fund.expense_ratio}%</td>
+					</tr>
+				))}
+				</tbody>
+			</table>
+			</div>
+		
+			<div className="mt-4 text-xs text-gray-500">
+			<p>• All schemes are Direct Growth plans</p>
+			<p>• Past returns are not indicative of future performance</p>
+			<p>• Check latest NAV, expense ratio, and exit loads on AMC websites</p>
+			</div>
+		</div>
+		)}
+
 
         {/* Retirement */}
         {activeTab === 'retirement' && calculated && retirement && (
