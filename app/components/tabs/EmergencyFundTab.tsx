@@ -120,7 +120,7 @@ export const EmergencyFundTab: React.FC<EmergencyFundTabProps> = ({
                 {opt.type === "liquid_fund" ? (
                   <>
                     <h4 className="font-semibold text-gray-900">
-                      {"fund" in opt.option ? opt.option.name : "Unknown Fund"}
+					  {opt.type === "liquid_fund" ? (opt.option as any).name : (opt.option as any).institution}
                     </h4>
                     <p className="text-sm text-gray-600 mt-1">
                       {"fund" in opt.option ? opt.option.category : "Liquid Fund"} |{" "}
