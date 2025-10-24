@@ -1,5 +1,5 @@
 import React from "react";
-import type { BudgetAllocation, EmergencyFund, Insurance, HealthScore } from "../types";
+import type { BudgetAllocation, EmergencyFund, Insurance, HealthScore } from "../../types";
 
 function cn(...classes: (string | boolean)[]) {
   return classes.filter(Boolean).join(" ");
@@ -36,7 +36,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
       <p className="text-gray-600">Your financial health at a glance</p>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Savings Rate Card */}
         <div
           className={cn(
             budget.savingsRate >= 20 ? "card-success" : "card-warn",
@@ -51,7 +50,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           <div className="text-sm mt-2">{budget.status}</div>
         </div>
 
-        {/* Emergency Fund Card */}
         <div
           className={cn(
             ef.completionPct >= 75 ? "card-success" : "card-warn",
@@ -66,7 +64,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           <div className="text-sm mt-2">{ef.status}</div>
         </div>
 
-        {/* Insurance Gap Card */}
         <div
           className={cn(
             insurance.term.gap <= 0 && insurance.health.gap <= 0
@@ -83,7 +80,6 @@ export const DashboardTab: React.FC<DashboardTabProps> = ({
           <div className="text-sm mt-2">To be filled</div>
         </div>
 
-        {/* Health Score Card */}
         <div
           className={cn(
             healthScore.overallScore >= 80

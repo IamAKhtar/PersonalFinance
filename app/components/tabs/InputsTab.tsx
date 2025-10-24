@@ -1,5 +1,5 @@
 import React from "react";
-import type { UserInputs } from "../types";
+import type { UserInputs } from "../../types";
 
 interface InputsTabProps {
   inputs: UserInputs;
@@ -70,7 +70,7 @@ export const InputsTab: React.FC<InputsTabProps> = ({
             value={inputs.cityTier}
             onChange={handleChange}
           >
-            <option>Tier 1 Metro</option>
+            <option>Tier 1 (Metro)</option>
             <option>Tier 2</option>
             <option>Tier 3</option>
           </select>
@@ -87,15 +87,13 @@ export const InputsTab: React.FC<InputsTabProps> = ({
         </div>
         <div>
           <label className="label">Marital Status</label>
-          <select
+          <input
             name="maritalStatus"
             className="field"
             value={inputs.maritalStatus}
             onChange={handleChange}
-          >
-            <option>Single</option>
-            <option>Married</option>
-          </select>
+            placeholder="e.g., Single, Married"
+          />
         </div>
         <div>
           <label className="label">Risk Tolerance</label>

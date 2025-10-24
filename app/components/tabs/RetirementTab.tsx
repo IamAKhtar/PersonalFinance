@@ -1,5 +1,5 @@
 import React from "react";
-import type { Retirement } from "../types";
+import type { Retirement } from "../../types";
 
 interface RetirementTabProps {
   retirement: Retirement | null;

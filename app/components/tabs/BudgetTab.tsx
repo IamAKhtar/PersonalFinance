@@ -1,5 +1,5 @@
 import React from "react";
-import type { BudgetAllocation } from "../types";
+import type { BudgetAllocation } from "../../types";
 
 interface BudgetTabProps {
   budget: BudgetAllocation | null;

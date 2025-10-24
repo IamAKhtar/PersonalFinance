@@ -1,6 +1,6 @@
 import React, { useState } from "react";
-import type { Investment } from "../types";
-import type { SuggestedSIP } from "../lib/productSelector";
+import type { Investment } from "../../types";
+import type { SuggestedSIP } from "../../lib/productSelector";
 
 function uid() {
   return Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
@@ -80,7 +80,6 @@ export const InvestmentTab: React.FC<InvestmentTabProps> = ({
       <h2 className="text-2xl font-bold text-gray-900">Investment Allocation Strategy</h2>
       <p className="text-gray-600">Build wealth with a balanced portfolio</p>
 
-      {/* Recommended Allocation */}
       <div className="card">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           📊 Recommended Allocation
@@ -107,7 +106,6 @@ export const InvestmentTab: React.FC<InvestmentTabProps> = ({
         </div>
       </div>
 
-      {/* Your Current SIPs */}
       <div className="card">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Current SIPs</h3>
         {sips.length > 0 ? (
@@ -181,7 +179,6 @@ export const InvestmentTab: React.FC<InvestmentTabProps> = ({
         </div>
       </div>
 
-      {/* Your Existing Assets */}
       <div className="card">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Existing Assets</h3>
         {assets.length > 0 ? (
@@ -240,7 +237,6 @@ export const InvestmentTab: React.FC<InvestmentTabProps> = ({
         </div>
       </div>
 
-      {/* Suggested SIP Basket */}
       {suggestedSIPs.length > 0 && (
         <div className="card">
           <h3 className="text-lg font-semibold text-gray-900 mb-2">

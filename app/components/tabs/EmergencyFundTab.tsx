@@ -1,6 +1,6 @@
 import React from "react";
-import type { EmergencyFund } from "../types";
-import type { SuggestedParking } from "../lib/productSelector";
+import type { EmergencyFund } from "../../types";
+import type { SuggestedParking } from "../../lib/productSelector";
 
 interface EmergencyFundTabProps {
   ef: EmergencyFund | null;

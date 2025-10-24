@@ -1,5 +1,5 @@
 import React from "react";
-import type { HealthScore } from "../types";
+import type { HealthScore } from "../../types";
 
 interface HealthScoreTabProps {
   healthScore: HealthScore | null;
@@ -37,7 +37,6 @@ export const HealthScoreTab: React.FC<HealthScoreTabProps> = ({ healthScore, set
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {/* Savings Score */}
         <div
           className={cn(
             healthScore.savingsScore >= 80 ? "card-success" : healthScore.savingsScore >= 60 ? "card-info" : "card-warn",
@@ -50,7 +49,6 @@ export const HealthScoreTab: React.FC<HealthScoreTabProps> = ({ healthScore, set
           <p className="text-sm opacity-90">Current: {healthScore.savingsRate.toFixed(1)}%</p>
         </div>
 
-        {/* Emergency Fund Score */}
         <div
           className={cn(
             healthScore.efScore >= 80 ? "card-success" : healthScore.efScore >= 60 ? "card-info" : "card-warn",
@@ -63,7 +61,6 @@ export const HealthScoreTab: React.FC<HealthScoreTabProps> = ({ healthScore, set
           <p className="text-sm opacity-90">Completion: {healthScore.efCompletion.toFixed(0)}%</p>
         </div>
 
-        {/* Insurance Score */}
         <div
           className={cn(
             healthScore.insuranceScore >= 80 ? "card-success" : healthScore.insuranceScore >= 60 ? "card-info" : "card-warn",
@@ -78,7 +75,6 @@ export const HealthScoreTab: React.FC<HealthScoreTabProps> = ({ healthScore, set
           </p>
         </div>
 
-        {/* Debt Score */}
         <div
           className={cn(
             healthScore.debtScore >= 80 ? "card-success" : healthScore.debtScore >= 60 ? "card-info" : "card-warn",
@@ -90,7 +86,6 @@ export const HealthScoreTab: React.FC<HealthScoreTabProps> = ({ healthScore, set
           <p className="text-sm opacity-90">EMI: {healthScore.emiPct.toFixed(1)}% of income</p>
         </div>
 
-        {/* Investment Score */}
         <div
           className={cn(
             healthScore.investmentScore >= 80 ? "card-success" : healthScore.investmentScore >= 60 ? "card-info" : "card-warn",
@@ -103,7 +98,6 @@ export const HealthScoreTab: React.FC<HealthScoreTabProps> = ({ healthScore, set
           <p className="text-sm opacity-90">Current vs Expected</p>
         </div>
 
-        {/* Overall Rating */}
         <div
           className={cn(
             healthScore.overallScore >= 80 ? "card-success" : healthScore.overallScore >= 60 ? "card-info" : "card-warn",

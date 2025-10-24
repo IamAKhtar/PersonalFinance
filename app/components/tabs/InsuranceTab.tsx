@@ -1,6 +1,6 @@
 import React from "react";
-import type { Insurance } from "../types";
-import type { SuggestedTerm, SuggestedHealth } from "../lib/productSelector";
+import type { Insurance } from "../../types";
+import type { SuggestedTerm, SuggestedHealth } from "../../lib/productSelector";
 
 interface InsuranceTabProps {
   insurance: Insurance | null;
@@ -30,7 +30,6 @@ export const InsuranceTab: React.FC<InsuranceTabProps> = ({
       <h2 className="text-2xl font-bold text-gray-900">Insurance Planning</h2>
       <p className="text-gray-600">Protect your family's financial future</p>
 
-      {/* Term Life Insurance */}
       <div className="card">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           🛡️ Term Life Insurance
@@ -91,7 +90,6 @@ export const InsuranceTab: React.FC<InsuranceTabProps> = ({
         )}
       </div>
 
-      {/* Health Insurance */}
       <div className="card">
         <h3 className="text-lg font-semibold text-gray-900 mb-4">
           🏥 Health Insurance
@@ -151,7 +149,6 @@ export const InsuranceTab: React.FC<InsuranceTabProps> = ({
         )}
       </div>
 
-      {/* Total Insurance Plan */}
       <div className="card bg-brand-primary text-white">
         <h3 className="text-lg font-semibold mb-4">📋 Total Insurance Plan</h3>
         <div className="space-y-3">
