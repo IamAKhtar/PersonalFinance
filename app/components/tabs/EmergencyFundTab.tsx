@@ -1,97 +1,167 @@
-import { useState, useEffect } from 'react';
-import type { MutualFund, FDRate } from '../../../data/products.types';
-import { calculateEmergencyFund } from '../../lib/calculations';
-import { selectParkingOptions } from '../../lib/productSelector';
-import { cn, uid, formatCurrency, SipItem, AssetItem } from './types';
+import React from "react";
+import type { EmergencyFund } from "../types";
+import type { SuggestedParking } from "../lib/productSelector";
 
+interface EmergencyFundTabProps {
+  ef: EmergencyFund | null;
+  formatCurrency: (value: number) => string;
+  suggestedParking: SuggestedParking[];
+  dataAsOf: string;
+}
 
-export default function EmergencyFundTab() {
-  // inputs, calculated from context or hooks (omitted for brevity)
-  const ef = calculateEmergencyFund(/* inputs */);
-  const [efTargetType, setEfTargetType] = useState<'min'|'rec'|'cons'>('rec');
-  const [efMonthsToReach, setEfMonthsToReach] = useState(9);
-  const [mutualFunds, setMutualFunds] = useState<MutualFund[]>([]);
-  const [fdRates, setFdRates] = useState<FDRate[]>([]);
-  const [dataAsOf, setDataAsOf] = useState('');
-
-  useEffect(() => {
-    fetch('/data/mutual_funds.json').then(r => r.json()).then(d=>setMutualFunds(d.mutual_funds));
-    fetch('/data/fd_rates.json').then(r => r.json()).then(d=>setFdRates(d.fd_rates));
-    fetch('/data/mutual_funds.json').then(r=>r.json()).then(d=>setDataAsOf(d.as_of));
-  }, []);
-
-  const selectedTarget =
-    efTargetType==='cons'?ef.conservativeTarget
-    :efTargetType==='min'?ef.minimumTarget
-    :ef.recommendedTarget;
-  const parking = selectParkingOptions(mutualFunds, fdRates, efMonthsToReach, selectedTarget);
+export const EmergencyFundTab: React.FC<EmergencyFundTabProps> = ({
+  ef,
+  formatCurrency,
+  suggestedParking,
+  dataAsOf,
+}) => {
+  if (!ef) {
+    return (
+      <div className="text-center p-8">
+        <p className="text-gray-600">No emergency fund data available.</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-4">Emergency Fund Planning</h2>
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900">Emergency Fund Planning</h2>
+      <p className="text-gray-600">
+        Build a safety net for unexpected expenses
+      </p>
 
-      {/* Controls */}
-      <div className="flex justify-between mb-6">
-        <div className="space-x-2">
-          <button onClick={()=>setEfTargetType('min')} className={cn(efTargetType==='min'?'bg-brand-primary text-white':'bg-white text-gray-700')}>Min (6m)</button>
-          <button onClick={()=>setEfTargetType('rec')} className={cn(efTargetType==='rec'?'bg-brand-primary text-white':'bg-white text-gray-700')}>Rec (9m)</button>
-          <button onClick={()=>setEfTargetType('cons')} className={cn(efTargetType==='cons'?'bg-brand-primary text-white':'bg-white text-gray-700')}>Cons (12m)</button>
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          Essential Monthly Expenses
+        </h3>
+        <p className="text-3xl font-bold text-brand-primary">
+          ₹{formatCurrency(ef.essentialExpenses)}
+        </p>
+        <p className="text-sm text-gray-600 mt-1">
+          (70% of expenses + EMI)
+        </p>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="card-warn rounded-xl p-6 shadow">
+          <h4 className="font-semibold mb-2">Minimum (6 months)</h4>
+          <p className="text-2xl font-bold">₹{formatCurrency(ef.minimumTarget)}</p>
         </div>
-        <div>
-          <select value={efMonthsToReach} onChange={e=>setEfMonthsToReach(Number(e.target.value))} className="field">
-            {[6,9,12,18,24].map(m=> <option key={m} value={m}>{m} months</option>)}
-          </select>
+        <div className="card-info rounded-xl p-6 shadow">
+          <h4 className="font-semibold mb-2">Recommended (9 months)</h4>
+          <p className="text-2xl font-bold">₹{formatCurrency(ef.recommendedTarget)}</p>
+        </div>
+        <div className="card-success rounded-xl p-6 shadow">
+          <h4 className="font-semibold mb-2">Conservative (12 months)</h4>
+          <p className="text-2xl font-bold">₹{formatCurrency(ef.conservativeTarget)}</p>
         </div>
       </div>
 
-      {/* Targets */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
-        {[['cons',ef.conservativeTarget],['rec',ef.recommendedTarget],['min',ef.minimumTarget]]
-          .map(([key,val])=>(
-          <div key={key} onClick={()=>setEfTargetType(key as any)}
-               className={cn('p-4 border rounded-lg cursor-pointer', efTargetType===key?'border-brand-primary shadow':'border-gray-200')}>
-            <div className="text-sm text-gray-600">{key==='rec'?'Recommended':key==='cons'?'Conservative':'Minimum'}</div>
-            <div className="text-xl font-bold mt-2">{formatCurrency(val)}</div>
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">Your Progress</h3>
+        <div className="space-y-4">
+          <div>
+            <div className="flex justify-between mb-2">
+              <span className="font-medium">Existing Fund:</span>
+              <span className="text-lg font-bold">₹{formatCurrency(ef.existing)}</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-4">
+              <div
+                className="bg-brand-primary h-4 rounded-full transition-all"
+                style={{ width: `${Math.min(100, ef.completionPct)}%` }}
+              ></div>
+            </div>
+            <p className="text-sm text-gray-600 mt-1">
+              {ef.completionPct.toFixed(1)}% of recommended target
+            </p>
           </div>
-        ))}
-      </div>
 
-      {/* Existing / Gap / Progress */}
-      <div className="space-y-4 mb-6">
-        <div className="flex justify-between"><span>Existing</span><span>{formatCurrency(ef.existing)}</span></div>
-        <div className="flex justify-between"><span>Gap</span><span className="text-orange-600">{formatCurrency(Math.max(0,selectedTarget-ef.existing))}</span></div>
-        <div>
-          <div className="w-full bg-gray-200 h-2 rounded"><div className={cn('h-2 rounded',ef.completionPct>=75?'bg-green-500':'bg-orange-500')} style={{width:`${ef.completionPct}%`}}/></div>
-          <div className="text-sm mt-1 text-right">{ef.completionPct.toFixed(1)}%</div>
-        </div>
-      </div>
-
-      {/* Parking Strategy */}
-      <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-6 text-xs text-yellow-800">
-        <p><strong>Parking Strategy:</strong> 50% Savings Account + 50% Liquid/FD</p>
-      </div>
-
-      {/* Suggested Parking */}
-      {parking.length>0 && (
-        <div>
-          <div className="flex justify-between mb-2">
-            <h3 className="font-semibold">Suggested Parking</h3>
-            <span className="text-xs text-gray-500">Data as of {dataAsOf}</span>
-          </div>
-          <div className="grid grid-cols-2 gap-4">
-            {parking.map((p,i)=>(
-              <div key={i} className="border rounded-lg p-4">
-                <div className="flex justify-between mb-1">
-                  <div className="font-medium">{p.type==='liquid_fund'?(p.option as MutualFund).name:(p.option as FDRate).institution}</div>
-                  <span className="text-xs bg-blue-100 text-blue-700 px-2 rounded">{p.allocation_pct}%</span>
+          {ef.gap > 0 && (
+            <>
+              <div className="flex justify-between items-center p-3 bg-orange-50 rounded">
+                <span className="font-medium">Gap to fill:</span>
+                <span className="text-lg font-bold text-orange-700">
+                  ₹{formatCurrency(ef.gap)}
+                </span>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="p-4 bg-blue-50 rounded">
+                  <p className="text-sm text-gray-700">Reach target in 12 months:</p>
+                  <p className="text-xl font-bold text-blue-700 mt-1">
+                    ₹{formatCurrency(ef.monthlyContribution12)}/month
+                  </p>
                 </div>
-                <div className="text-lg font-bold mb-1">{formatCurrency(p.amount)}</div>
-                <div className="text-xs text-gray-600">{p.reason}</div>
+                <div className="p-4 bg-green-50 rounded">
+                  <p className="text-sm text-gray-700">Reach target in 24 months:</p>
+                  <p className="text-xl font-bold text-green-700 mt-1">
+                    ₹{formatCurrency(ef.monthlyContribution24)}/month
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+
+          <div className="flex justify-between items-center p-3 bg-gray-100 rounded">
+            <span className="font-medium">Status:</span>
+            <span className="text-lg font-bold">{ef.status}</span>
+          </div>
+        </div>
+      </div>
+
+      {suggestedParking.length > 0 && (
+        <div className="card">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">
+            💡 Suggested Parking Options
+          </h3>
+          <p className="text-xs text-gray-500 mb-4">Data as of {dataAsOf}</p>
+          <div className="space-y-3">
+            {suggestedParking.map((opt, idx) => (
+              <div key={idx} className="p-4 border border-gray-200 rounded-lg">
+                {opt.type === "liquid_fund" ? (
+                  <>
+                    <h4 className="font-semibold text-gray-900">
+                      {"fund" in opt.option ? opt.option.name : "Unknown Fund"}
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {"fund" in opt.option ? opt.option.category : "Liquid Fund"} |{" "}
+                      {"fund" in opt.option ? opt.option.amc : ""}
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <h4 className="font-semibold text-gray-900">
+                      {"institution" in opt.option ? opt.option.institution : "Bank FD"}
+                    </h4>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Rate: {"rate_general" in opt.option ? opt.option.rate_general : 0}% |{" "}
+                      Rating: {"rating_band" in opt.option ? opt.option.rating_band : ""}
+                    </p>
+                  </>
+                )}
+                <p className="text-sm text-gray-700 mt-2">
+                  <strong>Allocation:</strong> {opt.allocation_pct}% (₹
+                  {formatCurrency(opt.amount)})
+                </p>
+                <p className="text-sm text-gray-600 mt-1">{opt.reason}</p>
               </div>
             ))}
           </div>
+          <p className="text-xs text-gray-500 mt-4 italic">
+            <strong>Disclaimer:</strong> Curated options for reference. Not
+            financial advice. Verify rates and terms before investing.
+          </p>
         </div>
       )}
+
+      <div className="p-4 bg-yellow-50 rounded-lg">
+        <h4 className="font-semibold text-gray-900 mb-2">🎯 Action Steps</h4>
+        <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+          <li>Keep 3-6 months in highly liquid savings account</li>
+          <li>Park remaining in liquid/overnight mutual funds</li>
+          <li>Avoid locking emergency funds in FDs with penalties</li>
+          <li>Review and top-up emergency fund annually</li>
+        </ul>
+      </div>
     </div>
   );
-}
+};

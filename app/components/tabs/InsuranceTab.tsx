@@ -1,78 +1,190 @@
-import { useEffect, useState } from 'react';
-import type { TermInsurance, HealthInsurance } from '../../../data/products.types';
-import { calculateInsurance } from '../../lib/calculations';
-import { selectTermInsurance, selectHealthInsurance } from '../../lib/productSelector';
-import { cn, uid, formatCurrency, SipItem, AssetItem } from './types';
+import React from "react";
+import type { Insurance } from "../types";
+import type { SuggestedTerm, SuggestedHealth } from "../lib/productSelector";
 
-export default function InsuranceTab() {
-  // inputs, calculated from context/hooks (omitted)
-  const insurance = calculateInsurance(/* inputs */);
-  const [termPolicies, setTermPolicies] = useState<TermInsurance[]>([]);
-  const [healthPolicies, setHealthPolicies] = useState<HealthInsurance[]>([]);
-  const [dataAsOf, setDataAsOf] = useState('');
+interface InsuranceTabProps {
+  insurance: Insurance | null;
+  formatCurrency: (value: number) => string;
+  suggestedTerm: SuggestedTerm[];
+  suggestedHealth: SuggestedHealth[];
+  dataAsOf: string;
+}
 
-  useEffect(() => {
-    fetch('/data/term_insurance.json').then(r=>r.json()).then(d=>{ setTermPolicies(d.term_insurance); setDataAsOf(d.as_of); });
-    fetch('/data/health_insurance.json').then(r=>r.json()).then(d=>setHealthPolicies(d.health_insurance));
-  }, []);
-
-  const suggestedTerm = insurance.term.gap>0
-    ? selectTermInsurance(termPolicies, insurance.term.recommended)
-    : [];
-  const suggestedHealth = insurance.health.gap>0
-    ? selectHealthInsurance(healthPolicies, insurance.health.recommended)
-    : [];
+export const InsuranceTab: React.FC<InsuranceTabProps> = ({
+  insurance,
+  formatCurrency,
+  suggestedTerm,
+  suggestedHealth,
+  dataAsOf,
+}) => {
+  if (!insurance) {
+    return (
+      <div className="text-center p-8">
+        <p className="text-gray-600">No insurance data available.</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
-      <h2 className="text-2xl font-bold mb-6">Insurance Planning</h2>
-      {/* Term Life Section (existing UI) */}
+    <div className="space-y-6">
+      <h2 className="text-2xl font-bold text-gray-900">Insurance Planning</h2>
+      <p className="text-gray-600">Protect your family's financial future</p>
 
-      {/* Suggested Term Insurance */}
-      {suggestedTerm.length>0 && (
-        <div className="border-t pt-6">
-          <div className="flex justify-between mb-2">
-            <h3 className="font-semibold">💡 Suggested Term Insurance</h3>
-            <span className="text-xs text-gray-500">Data as of {dataAsOf}</span>
+      {/* Term Life Insurance */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          🛡️ Term Life Insurance
+        </h3>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
+            <span className="font-medium">Recommended Cover:</span>
+            <span className="text-lg font-bold text-blue-700">
+              ₹{formatCurrency(insurance.term.recommended)}
+            </span>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {suggestedTerm.map((t,i)=>(
-              <div key={i} className="border rounded-lg p-4">
-                <div className="font-semibold">{t.policy.insurer}</div>
-                <div className="text-sm text-gray-600 mb-2">{t.policy.product}</div>
-                <div className="text-xs text-gray-600 mb-1">CSR: {t.policy.claim_settlement_ratio}%</div>
-                <div className="text-xs text-gray-600 mb-3">Solvency: {t.policy.solvency_ratio}</div>
-                <div className="text-sm mb-2">Premium: <span className="font-bold">{formatCurrency(t.policy.sample_premium_age_30_1cr)}/yr</span></div>
-                <div className="text-xs text-gray-600">{t.reason}</div>
-              </div>
-            ))}
+          <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+            <span className="font-medium">Existing Cover:</span>
+            <span className="text-lg font-bold">
+              ₹{formatCurrency(insurance.term.existing)}
+            </span>
+          </div>
+          {insurance.term.gap > 0 && (
+            <div className="flex justify-between items-center p-3 bg-orange-50 rounded">
+              <span className="font-medium">Gap to fill:</span>
+              <span className="text-lg font-bold text-orange-700">
+                ₹{formatCurrency(insurance.term.gap)}
+              </span>
+            </div>
+          )}
+          <div className="flex justify-between items-center p-3 bg-green-50 rounded">
+            <span className="font-medium">Estimated Annual Premium:</span>
+            <span className="text-lg font-bold text-green-700">
+              ₹{formatCurrency(insurance.term.annualPremium)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center p-3 bg-gray-100 rounded">
+            <span className="font-medium">Status:</span>
+            <span className="text-lg font-bold">{insurance.term.status}</span>
           </div>
         </div>
-      )}
 
-      {/* Health Section (existing UI) */}
-
-      {/* Suggested Health Insurance */}
-      {suggestedHealth.length>0 && (
-        <div className="border-t pt-6">
-          <div className="flex justify-between mb-2">
-            <h3 className="font-semibold">💡 Suggested Health Insurance</h3>
-            <span className="text-xs text-gray-500">Data as of {dataAsOf}</span>
+        {suggestedTerm.length > 0 && (
+          <div className="mt-6">
+            <h4 className="font-semibold text-gray-900 mb-2">
+              💡 Suggested Term Insurance Shortlist
+            </h4>
+            <p className="text-xs text-gray-500 mb-3">Data as of {dataAsOf}</p>
+            <div className="space-y-3">
+              {suggestedTerm.map((term, idx) => (
+                <div key={idx} className="p-4 border border-gray-200 rounded-lg">
+                  <h5 className="font-semibold text-gray-900">{term.policy.insurer}</h5>
+                  <p className="text-sm text-gray-700 mt-2">{term.reason}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-3 italic">
+              <strong>Disclaimer:</strong> Sample policies for reference. Premiums
+              vary by age, health, lifestyle. Not financial advice. Compare quotes
+              from multiple insurers.
+            </p>
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {suggestedHealth.map((h,i)=>(
-              <div key={i} className="border rounded-lg p-4">
-                <div className="font-semibold">{h.policy.insurer}</div>
-                <div className="text-sm text-gray-600 mb-2">{h.policy.plan}</div>
-                <div className="text-xs text-gray-600 mb-1">Sum Insured: {h.policy.sum_insured_bands.join(', ')}</div>
-                <div className="text-xs text-gray-600 mb-1">Restoration: {h.policy.restoration?'Yes':'No'}</div>
-                <div className="text-sm mb-2">Premium: <span className="font-bold">{formatCurrency(h.policy.sample_premium_family_float)}/yr</span></div>
-                <div className="text-xs text-gray-600">{h.reason}</div>
-              </div>
-            ))}
+        )}
+      </div>
+
+      {/* Health Insurance */}
+      <div className="card">
+        <h3 className="text-lg font-semibold text-gray-900 mb-4">
+          🏥 Health Insurance
+        </h3>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center p-3 bg-blue-50 rounded">
+            <span className="font-medium">Recommended Cover:</span>
+            <span className="text-lg font-bold text-blue-700">
+              ₹{formatCurrency(insurance.health.recommended)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center p-3 bg-gray-50 rounded">
+            <span className="font-medium">Existing Cover:</span>
+            <span className="text-lg font-bold">
+              ₹{formatCurrency(insurance.health.existing)}
+            </span>
+          </div>
+          {insurance.health.gap > 0 && (
+            <div className="flex justify-between items-center p-3 bg-orange-50 rounded">
+              <span className="font-medium">Gap to fill:</span>
+              <span className="text-lg font-bold text-orange-700">
+                ₹{formatCurrency(insurance.health.gap)}
+              </span>
+            </div>
+          )}
+          <div className="flex justify-between items-center p-3 bg-green-50 rounded">
+            <span className="font-medium">Estimated Annual Premium:</span>
+            <span className="text-lg font-bold text-green-700">
+              ₹{formatCurrency(insurance.health.annualPremium)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center p-3 bg-gray-100 rounded">
+            <span className="font-medium">Status:</span>
+            <span className="text-lg font-bold">{insurance.health.status}</span>
           </div>
         </div>
-      )}
+
+        {suggestedHealth.length > 0 && (
+          <div className="mt-6">
+            <h4 className="font-semibold text-gray-900 mb-2">
+              💡 Suggested Health Insurance Shortlist
+            </h4>
+            <p className="text-xs text-gray-500 mb-3">Data as of {dataAsOf}</p>
+            <div className="space-y-3">
+              {suggestedHealth.map((health, idx) => (
+                <div key={idx} className="p-4 border border-gray-200 rounded-lg">
+                  <h5 className="font-semibold text-gray-900">{health.policy.insurer}</h5>
+                  <p className="text-sm text-gray-700 mt-2">{health.reason}</p>
+                </div>
+              ))}
+            </div>
+            <p className="text-xs text-gray-500 mt-3 italic">
+              <strong>Disclaimer:</strong> Sample policies for reference. Premiums
+              vary by age, family size, city. Not financial advice. Compare multiple quotes.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Total Insurance Plan */}
+      <div className="card bg-brand-primary text-white">
+        <h3 className="text-lg font-semibold mb-4">📋 Total Insurance Plan</h3>
+        <div className="space-y-3">
+          <div className="flex justify-between items-center">
+            <span className="font-medium">Combined Annual Premium:</span>
+            <span className="text-2xl font-bold">
+              ₹{formatCurrency(insurance.totalAnnualPremium)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-medium">Monthly Impact:</span>
+            <span className="text-xl font-bold">
+              ₹{formatCurrency(insurance.monthlyImpact)}
+            </span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-medium">% of Monthly Income:</span>
+            <span className="text-xl font-bold">
+              {insurance.pctOfIncome.toFixed(2)}%
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div className="p-4 bg-yellow-50 rounded-lg">
+        <h4 className="font-semibold text-gray-900 mb-2">🎯 Action Steps</h4>
+        <ul className="list-disc list-inside space-y-1 text-sm text-gray-700">
+          <li>Buy term insurance early - premiums increase with age</li>
+          <li>Choose online plans for lower premiums</li>
+          <li>Review health insurance annually as medical costs rise</li>
+          <li>Consider top-up/super top-up for additional health cover</li>
+        </ul>
+      </div>
     </div>
   );
-}
+};
